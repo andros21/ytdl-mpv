@@ -1,0 +1,441 @@
+#!/usr/bin/env bash
+
+# *--------------------------------------------*
+# | YTDL-MPV                                   |
+# |                                            |
+# | Browse and play YouTube contents from rofi |
+# | using youtube-dl and mpv                   |
+# |                                            |
+# | Authors: Andrea Rossoni                    |
+# | License: GPLv3                             |
+# *--------------------------------------------*
+
+
+# Default functions
+_rofi() {
+   rofi -dmenu -no-auto-select -i -width "${WIDTH}" -l "${LINE}" -p 'ytdl-mpv > ' "$@"
+}
+_rofi_slim() {
+   rofi -dmenu -no-auto-select -i -width 50 -l 13 -p 'ytdl-mpv > ' "$@"
+}
+_copyId() {
+   if [ "$XCLIP" ]; then
+      printf '%s' "$1" | xclip -i -selection "clipboard"
+      printf '[Info] Copy in clipboard ... %s\n' "${1:7}"
+   fi
+}
+_ytdl_mpvctl() {
+   mpvctl --socket "${SOCKET}" "$@"
+}
+_playAudio() {
+   mpv --no-terminal --input-ipc-server="${SOCKET}" --ytdl-format=bestaudio "$1" &> /dev/null &
+   printf '[Info] Audio playback ... %s\n' "${1:7}"
+}
+_playVideo() {
+   mpv --input-ipc-server="$SOCKET" \
+       --ytdl-format="bestvideo[height<=?720][fps<=?30][vcodec!=?vp9]+bestaudio/best" "$1" &> /dev/null &
+   printf '[Info] Video playback ... %s\n' "${1:7}"
+}
+_appendTrack() {
+   if _ytdl_mpvctl add "$1"; then
+      printf '[Info] Add track to cur playlist ... %s\n' "${1:7}"
+   fi
+}
+_removeTrack() {
+   if _ytdl_mpvctl rm "$1"; then
+      printf '[Info] Track removed from cur playlist ... %s\n' "$2"
+   fi
+}
+_savePlaylist() {
+   if _ytdl_mpvctl save "$1"; then
+      printf '[Info] Current playlist saved to ... %s\n' "$1"
+   fi
+}
+_loadPlaylist() {
+   if _ytdl_mpvctl load "$1"; then
+      printf '[Info] Playlist loaded from ... %s\n' "$1"
+   fi
+}
+_flushCache() {
+   if rm -fr "$CACHEDIR"; then
+      printf '[Info] ytdl-mpv cache flushed\n'
+   fi
+}
+_flushHist() {
+   if rm -fr "$HISTORY"; then
+      printf '[Info] ytdl-mpv search history flushed\n'
+   fi
+}
+
+# Default keybindings
+copy_id="Alt+c"
+default_do='_playAudio'
+play_audio="Alt+a"
+play_video="Alt+v"
+remove_track="Alt+r"
+
+# Default envs
+CACHEDIR=$HOME/.cache/ytdl-mpv
+DB=$CACHEDIR/ytdl-mpv.sqlite3
+HISTORY=$HOME/.ytdl-mpv.history
+LINE=16
+NUMBER=20
+PLAYDIR=$HOME/.local/share/ytdl-mpv
+SOCKET=/tmp/ytdl-mpv.sock
+WIDTH=70
+XCLIP=1
+
+# Ensure dependencies
+_checkDep() {
+   local deps
+   deps=(mpv mpvctl rofi sqlite3 youtube-dl xclip)
+   for dep in "${deps[@]}"; do
+      type "$dep" > /dev/null 2>&1 || {
+         if [ "$dep" == "xclip" ]; then
+            XCLIP=0
+         else
+            printf '%s\n' "[Error] Cannot find ${dep} in your \$PATH" >&2
+            exit 1;
+         fi
+      }
+   done
+}
+
+# Ensure internet connection is on
+_checkCon() {
+   if ! ping -c1 youtube.com &> /dev/null; then
+      printf '[Error] Unable to ping youtube.com, check your connection\n'
+      exit 1;
+   fi
+}
+
+# Usage (help) message
+_usage() {
+    cat >&2 << EOF
+usage: $(basename "$0") [-h] [--number NUMBER] [--line LINE] [--socket SOCKET] [--width WIDTH]
+
+YTDL-MPV - Browse and play yt contents from rofi using ytdl and mpv
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -n, --number NUMBER   search results number [default ${NUMBER}]
+  -l, --line LINE       number of rofi vertical line [default ${LINE}]
+  -s, --socket SOCKET   mpv socket path [default ${SOCKET}]
+  -w, --width WIDTH     rofi width [default ${WIDTH}]
+EOF
+}
+
+# Cat ytdl-mpv main menu
+_getMainMenu() {
+   cat << EOF
+< Exit
+aa) [ Add/play to cur playlist ] >
+ep) [ Edit cur playlist ] >
+fc) [ Flush cache dir ] >
+fh) [ Flush search history ] >
+ld) [ Load a saved playlist ] >
+lp) [ Loop/unloop cur playlist ] >
+nx) [ Play next track in playlist ] >
+pc) [ Playlist clear ] >
+pp) [ Toggle play/pause ] >
+pv) [ Play previous track in playlist ] >
+sp) [ Stop playback ] >
+sv) [ Save current playlist ] >
+EOF
+}
+
+# Hash a string and encode it
+_hashStr() {
+   printf '%s' "$1" | md5sum | base64
+}
+
+# Format and numbering plain file
+_getView() {
+   if [ -f "$1" ]; then
+      printf '< Return\n%s' "$(awk '{ print FNR ") " $0 }' < "$1" | sed 's/\<[0-9]\>/0&/')"
+   elif [ -d "$1" ]; then
+      printf '< Return\n%s' "$(find "$1" -type f -name '*' -exec basename -a -- {} + \
+         | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/')"
+   else
+      return
+   fi
+}
+
+# Check if a search was cached inside a table
+_isCachedTable() {
+   local search_table
+   search_table="$1"
+   if [ -f "$DB" ]; then
+      local count
+      count="$(sqlite3 "${DB}" \
+         "select count(*) from sqlite_master where type='table' and name='${search_table}'" 2> /dev/null)"
+      if [[ "$count" -gt 0 ]]; then printf "cached"; fi
+   fi
+}
+
+# Get a search that was cached inside a table
+# and stdout it formatted for rofi
+_getCachedTable() {
+   local search_table
+   search_table="$1"
+   printf '< Return\n%s' "$(sqlite3 "${DB}" \
+      "select title from ${search_table}" 2> /dev/null \
+      | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/')"
+}
+
+# Get id of yt content from cached table
+_getCachedIdTable() {
+   local search_table
+   local title
+   search_table="$1"
+   title="$2"
+   # escape quotes
+   title=$(printf '%s' "$title" | sed "s/'/''/g")
+   printf '%s' "$(sqlite3 "${DB}" \
+      "select distinct id from ${search_table} where title='${title}'" 2> /dev/null)"
+
+}
+
+# Cache a search inside a table
+# and append the results to the global table too
+_cacheTable() {
+   local search_table
+   search_table="$1"
+   local global_table
+   global_table="$(_hashStr "global")"
+   # create search_table and cache items
+   sqlite3 "${DB}" "create table if not exists ${search_table} (id str, title str)"
+   sed -E "N;s/(.*)\n(.*)/\2\,\"\1\"/" "$CACHEDIR/$search_table" \
+      | sqlite3 "${DB}" \
+      ".import --csv /dev/stdin ${search_table}" 2> /dev/null
+   # create global table and cache search table items
+   sqlite3 -header -csv "${DB}" "select * from ${search_table}" \
+      | sqlite3 "${DB}" ".import --csv /dev/stdin ${global_table}" 2> /dev/null
+}
+
+# ytdl-mpv main interactive menu
+_mainMenu() {
+   local action
+   action="$(_getMainMenu | _rofi_slim -mesg "-- main menu, select an action --" \
+      | awk '{$1=tolower($1);print $1}')"
+   action="${action::2}"
+   case "$action" in
+      aa)  _searchMenu;;
+      ep)  _editMenu;;
+      fc)  _flushCache;;
+      fh)  _flushHist;;
+      ld)  _loadMenu;;
+      lp)  _ytdl_mpvctl loop;;
+      nx)  _ytdl_mpvctl next;;
+      pc)  _ytdl_mpvctl clear;;
+      pp)  _ytdl_mpvctl toggle;;
+      pv)  _ytdl_mpvctl prev;;
+      sp)  _ytdl_mpvctl stop;;
+      sv)  _saveMenu;;
+      \<)  printf '[Info] Quitting\n'; exit 0;;
+      *)   printf '[Info] Nothing selected\n'; exit 0;;
+   esac
+}
+
+# Edit menu,
+# display playlist state, possible actions remove or select a track from playlist
+_editMenu() {
+      local args
+      args=( -mesg "Loop: $(_ytdl_mpvctl loop-status) -- [Enter] to play a track, [Alt+r] to remove a track --" -kb-custom-1 "${remove_track}" )
+      # get current playlist
+      local pl
+      pl="$(_ytdl_mpvctl playlist "${DB}" "$(_hashStr "global")")"
+      # selected track
+      local rofi_exit
+      str="$(printf '< Return\n%s' "${pl}" | _rofi "${args[@]}")"
+      rofi_exit="$?"
+      # selected track id
+      local sid
+      sid="$(printf '%s\n' "${str}" | awk '{print $2}')"
+      if [ -z "$str" ]; then
+         printf '[Info] Nothing selected\n'
+         exit 0
+      elif [ "${str::1}" == "<" ]; then
+         printf '[Info] Back to search menu\n'
+         _mainMenu;
+      else
+         # select only track number removing leading zero
+         local stn
+         stn="$(printf '%s\n' "${str::2}" | sed 's/^0*//')"
+         if [ -z "$stn" ]; then stn="0"; fi;
+         case "${rofi_exit}" in
+            0)  _ytdl_mpvctl track "$stn";;
+            10) _removeTrack "$stn" "$sid";;
+         esac
+         # recursive until explicit exit
+         _editMenu
+      fi
+}
+
+# Save menu,
+# save the current playlist as text file
+_saveMenu() {
+   mkdir -p "$PLAYDIR"
+   # saved playlists
+   local saved
+   saved="$(_getView "${PLAYDIR}" \
+      | _rofi_slim -mesg "-- Save the current playlist as --" \
+      | xargs | tr '[:upper:]' '[:lower:]')"
+   if [ -z "$saved" ]; then
+      printf '[Info] Nothing selected or searched\n'
+      exit 0;
+   elif [ "${saved::1}" == "<" ]; then
+      printf '[Info] Back to main menu\n'
+      _mainMenu;
+   else
+      # slice only selected items and not typed items
+      if [[ $saved =~ ^[0-9][0-9]\)\ (.*)$ ]]; then saved="${saved:4}"; fi;
+      _savePlaylist "$PLAYDIR/$saved"
+   fi
+}
+
+# Load menu,
+# load a playlist from text file, only audio playback
+_loadMenu() {
+   # saved playlists
+   local saved
+   saved="$(_getView "${PLAYDIR}" \
+      | _rofi_slim -mesg "-- Load a save playlist for audio playback --" \
+      | xargs | tr '[:upper:]' '[:lower:]')"
+   if [ -z "$saved" ]; then
+      printf '[Info] Nothing selected or searched\n'
+      exit 0;
+   elif [ "${saved::1}" == "<" ]; then
+      printf '[Info] Back to main menu\n'
+      _mainMenu;
+   else
+      # slice only selected items and not typed items
+      if [[ $saved =~ ^[0-9][0-9]\)\ (.*)$ ]]; then saved="${saved:4}"; fi;
+      # check if ytdl socket is idle, if yes append instead play
+      if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
+         # check if playlist file exist
+         if [ ! -f "$PLAYDIR/$saved" ]; then
+            printf '[Error] Invalid path given\n' >&2
+            exit 1;
+         fi
+         # selected track is the first one of the playlist
+         _playAudio "$(head -n1 "$PLAYDIR/$saved")"; sleep 3;
+         # append remaining tracks
+         local rtracks
+         rtracks="$(tail -n $(( $(wc -l "$PLAYDIR/$saved" | awk '{print $1}') - 1 )) "$PLAYDIR/$saved")"
+         for rtrack in $rtracks; do
+            _appendTrack "$rtrack"
+         done
+      else
+         _loadPlaylist "$PLAYDIR/$saved";
+      fi
+   fi
+}
+
+# Search menu,
+# select keywords from history, start a search
+_searchMenu() {
+   if [ -n "$HISTORY" ]; then touch "$HISTORY"; fi;
+   # select from history or type something,
+   # trim white spaces and lower case
+   search="$(_getView "$HISTORY" | _rofi_slim -mesg "-- Search something or select from yt history --" \
+      | xargs -0 | tr '[:upper:]' '[:lower:]')"
+   if [ -z "$search" ]; then
+      printf '[Info] Nothing selected or searched\n'
+      exit 0;
+   elif [ "${search::1}" == "<" ]; then
+      printf '[Info] Back to main menu\n'
+      _mainMenu;
+   else
+      # slice only selected items and not typed items
+      if [[ $search =~ ^[0-9][0-9]\)\ (.*)$ ]]; then search="${search:4}"; fi;
+      # remove trailing spaces
+      printf '%s\n' "$search" | sed 's/[ \t]*$//' >> "$HISTORY"
+      # unique and sorted entries inside history
+      local new_hist
+      new_hist="$(sort -u "$HISTORY")"
+      printf '%s\n' "$new_hist" > "$HISTORY"
+      printf '[Info] Searching for ... %s\n' "${search}"
+      _startPlay
+   fi
+}
+
+# Start ytdl search using keywords, and then start/append to playback
+_startPlay() {
+   # youtube-dl search
+   local table
+   table="$(_hashStr "${search}:${NUMBER}")"
+   mkdir -p "$CACHEDIR"
+   # if not cached, search it and cache it
+   local cache
+   cache="$(_isCachedTable "$table")"
+   if [ -z "$cache" ]; then
+      youtube-dl --default-search \
+         ytsearch"$NUMBER" "$search" --get-id --get-title \
+         2> /dev/null > "$CACHEDIR/$table" &
+      wait "$!"; youtube_dl_exit="$?"
+      if [ "$youtube_dl_exit" != "0" ]; then
+         printf '[Error] youtube-dl search fail, exit code %s returned\n' "$youtube_dl_exit" >&2
+         exit 1
+      fi
+      _cacheTable "$table" 2> /dev/null
+      rm -f "$CACHEDIR/$table"
+   fi
+   # check if ytdl-mpv is already running, if yes append track to playlist
+   local args
+   if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
+      args=( -mesg "-- [Alt+a] start audio playback, [Alt+v] start video playback --"
+                   -kb-custom-1 "${play_audio}"
+                   -kb-custom-2 "${play_video}"
+                   -kb-custom-3 "${copy_id}" )
+   else
+      args=( -mesg "-- Add a track to the current playlist, simply [Enter] --" )
+   fi
+   # selected track
+   local strack
+   local rofi_exit
+   strack="$(_getCachedTable "$table" | _rofi "${args[@]}")"
+   rofi_exit="$?"
+   if [ -z "$strack" ]; then
+      printf '[Info] Nothing selected\n'
+      exit 0
+   elif [ "${strack::1}" == "<" ]; then
+      printf '[Info] Back to search menu\n'
+      _searchMenu;
+   else
+      strack="${strack:4}"
+      local id
+      id="ytdl://$(_getCachedIdTable "$table" "$strack")"
+      # check if ytdl socket is idle, if yes append instead play
+      if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
+         case "${rofi_exit}" in
+            0) "${default_do}" "$id";;
+            10)     _playAudio "$id";;
+            11)     _playVideo "$id";;
+            12)        _copyId "$id";;
+         esac
+      else
+         _appendTrack "$id";
+      fi
+      # recursive until explicit exit
+      sleep 1; _startPlay
+   fi
+}
+
+
+# Parse optional argument
+while :; do
+    case "$1" in
+        -n|--number)   shift; [ -n "$1" ] && [[ $1 =~ ^[0-9]+$ ]] && NUMBER="$1";;
+        -l|--line)     shift; [ -n "$1" ] && [[ $1 =~ ^[0-9]+$ ]] && LINE="$1";;
+        -h|--help)     shift; _usage; exit 0;;
+        -s|--socket)   shift; [ -n "$1" ] && SOCKET="$1";;
+        -w|--width)    shift; [ -n "$1" ] && [[ $1 =~ ^[0-9]+$ ]] && WIDTH="$1";;
+        *)             break;;
+    esac
+    shift
+done
+
+_checkDep   # Run deps test
+_checkCon   # Run conn test
+_mainMenu   # Run main menu

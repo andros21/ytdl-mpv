@@ -1,0 +1,76 @@
+#
+# LINT.YML
+#
+# This workflow will run:
+#
+#   * `changes`
+#     * check what files have been changes
+#
+#   * `lint`
+#     * install deps
+#     * make install
+#     * shellcheck scripts
+#     * simple run scripts
+#
+
+---
+name: Lint CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  changes:
+    name: Check changes
+    runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.filter.outputs.files }}
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v2
+
+      - name: Filter paths
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            files:
+              - 'bin/**'
+              - 'Makefile'
+
+  lint:
+    name: Shell check
+    runs-on: ubuntu-latest
+    needs: [ changes ]
+    if: ${{ needs.changes.outputs.files == 'true' }}
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v2
+
+      - name: Install deps
+        run: |
+          sudo apt update
+          sudo apt install mpv rofi
+          python -m pip install youtube-dl
+
+      - name: Setup some envs
+        run: |
+          echo "HOME=$HOME" >> $GITHUB_ENV
+          echo "PATH=$PATH:$HOME/.local/bin" >> $GITHUB_ENV
+
+      - name: Shellcheck scripts
+        run: |
+          shellcheck -s bash bin/mpvctl
+          shellcheck -s bash bin/ytdl-mpv
+
+      - name: Make install
+        run: make
+
+      - name: Run mpvctl help
+        run: mpvctl --help
+
+      - name: Run ytdl-mpv help
+        run: ytdl-mpv --help
