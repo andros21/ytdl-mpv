@@ -206,11 +206,11 @@ _cacheTable() {
    # create search_table and cache items
    sqlite3 "${DB}" "create table if not exists ${search_table} (id str, title str)"
    sed -E "N;s/(.*)\n(.*)/\2\,\"\1\"/" "$CACHEDIR/$search_table" \
-      | sqlite3 "${DB}" \
-      ".import --csv /dev/stdin ${search_table}" 2> /dev/null
+      | sqlite3 -separator ',' "${DB}" \
+      ".import /dev/stdin ${search_table}" 2> /dev/null
    # create global table and cache search table items
    sqlite3 -header -csv "${DB}" "select * from ${search_table}" \
-      | sqlite3 "${DB}" ".import --csv /dev/stdin ${global_table}" 2> /dev/null
+      | sqlite3 -separator ',' "${DB}" ".import /dev/stdin ${global_table}" 2> /dev/null
 }
 
 # ytdl-mpv main interactive menu
