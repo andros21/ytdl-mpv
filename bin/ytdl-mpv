@@ -41,11 +41,6 @@ _appendTrack() {
       printf '[Info] Add track to cur playlist ... %s\n' "${1:7}"
    fi
 }
-_removeTrack() {
-   if _ytdl_mpvctl rm "$1"; then
-      printf '[Info] Track removed from cur playlist ... %s\n' "$2"
-   fi
-}
 _savePlaylist() {
    if _ytdl_mpvctl save "$1"; then
       printf '[Info] Current playlist saved to ... %s\n' "$1"
@@ -138,7 +133,7 @@ lp) [ Loop/unloop cur playlist ] >
 nx) [ Play next track in playlist ] >
 pc) [ Playlist clear ] >
 pp) [ Toggle play/pause ] >
-pv) [ Play previous track in playlist ] >
+pv) [ Play prev track in playlist ] >
 sp) [ Stop playback ] >
 sv) [ Save current playlist ] >
 EOF
@@ -146,7 +141,9 @@ EOF
 
 # Hash a string and encode it
 _hashStr() {
-   printf '%s' "$1" | md5sum | base64
+   local hash
+   hash=$(printf '%s' "$1" | sha256sum | base64)
+   printf '%s' "${hash::19}"
 }
 
 # Format and numbering plain file
@@ -161,56 +158,48 @@ _getView() {
    fi
 }
 
-# Check if a search was cached inside a table
-_isCachedTable() {
-   local search_table
-   search_table="$1"
+# Check if a query was cached inside a table
+_isCachedQuery() {
+   local query
+   query="$1"
    if [ -f "$DB" ]; then
       local count
       count="$(sqlite3 "${DB}" \
-         "select count(*) from sqlite_master where type='table' and name='${search_table}'" 2> /dev/null)"
+         "select count(*) from main where query='${query}'" 2> /dev/null)"
       if [[ "$count" -gt 0 ]]; then printf "cached"; fi
    fi
 }
 
-# Get a search that was cached inside a table
+# Get a query that was cached inside main table
 # and stdout it formatted for rofi
-_getCachedTable() {
-   local search_table
-   search_table="$1"
+_getCachedQuery() {
+   local query
+   query="$1"
    printf '< Return\n%s' "$(sqlite3 "${DB}" \
-      "select title from ${search_table}" 2> /dev/null \
+      "select title from main where query='${query}'" 2> /dev/null \
       | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/')"
 }
 
 # Get id of yt content from cached table
-_getCachedIdTable() {
-   local search_table
+_getCachedIdQuery() {
+   local query
    local title
-   search_table="$1"
+   query="$1"
    title="$2"
    # escape quotes
    title=$(printf '%s' "$title" | sed "s/'/''/g")
    printf '%s' "$(sqlite3 "${DB}" \
-      "select distinct id from ${search_table} where title='${title}'" 2> /dev/null)"
-
+      "select id from main where query='${query}' and title='${title}'" 2> /dev/null)"
 }
 
-# Cache a search inside a table
-# and append the results to the global table too
-_cacheTable() {
-   local search_table
-   search_table="$1"
-   local global_table
-   global_table="$(_hashStr "global")"
-   # create search_table and cache items
-   sqlite3 "${DB}" "create table if not exists ${search_table} (id str, title str)"
-   sed -E "N;s/(.*)\n(.*)/\2\,\"\1\"/" "$CACHEDIR/$search_table" \
-      | sqlite3 -separator ',' "${DB}" \
-      ".import /dev/stdin ${search_table}" 2> /dev/null
-   # create global table and cache search table items
-   sqlite3 -header -csv "${DB}" "select * from ${search_table}" \
-      | sqlite3 -separator ',' "${DB}" ".import /dev/stdin ${global_table}" 2> /dev/null
+# Cache a query inside main table
+_cacheQuery() {
+   local query
+   query="$1"
+   # create main table and cache items
+   sqlite3 "${DB}" "create table if not exists main (query str, id str, title str)"
+   sed "s/;//g" "$CACHEDIR/$query" | sed -E "N;s/(.*)\n(.*)/${query};\2;\1/" \
+      | sqlite3 -separator ';' "${DB}" ".import /dev/stdin main" 2> /dev/null
 }
 
 # ytdl-mpv main interactive menu
@@ -244,14 +233,11 @@ _editMenu() {
       args=( -mesg "Loop: $(_ytdl_mpvctl loop-status) -- [Enter] to play a track, [Alt+r] to remove a track --" -kb-custom-1 "${remove_track}" )
       # get current playlist
       local pl
-      pl="$(_ytdl_mpvctl playlist "${DB}" "$(_hashStr "global")")"
+      pl="$(_ytdl_mpvctl playlist "${DB}")"
       # selected track
       local rofi_exit
       str="$(printf '< Return\n%s' "${pl}" | _rofi "${args[@]}")"
       rofi_exit="$?"
-      # selected track id
-      local sid
-      sid="$(printf '%s\n' "${str}" | awk '{print $2}')"
       if [ -z "$str" ]; then
          printf '[Info] Nothing selected\n'
          exit 0
@@ -259,16 +245,15 @@ _editMenu() {
          printf '[Info] Back to search menu\n'
          _mainMenu;
       else
-         # select only track number removing leading zero
          local stn
-         stn="$(printf '%s\n' "${str::2}" | sed 's/^0*//')"
-         if [ -z "$stn" ]; then stn="0"; fi;
+         # get track number
+         stn="$(printf '%s' "${str::2}" | sed 's/^0*//')"
          case "${rofi_exit}" in
-            0)  _ytdl_mpvctl track "$stn";;
-            10) _removeTrack "$stn" "$sid";;
+            0)  _ytdl_mpvctl track "$((stn-1))";;
+            10) _ytdl_mpvctl rm "$((stn-1))";;
          esac
          # recursive until explicit exit
-         _editMenu
+         sleep 0.3; _editMenu
       fi
 }
 
@@ -300,7 +285,7 @@ _loadMenu() {
    # saved playlists
    local saved
    saved="$(_getView "${PLAYDIR}" \
-      | _rofi_slim -mesg "-- Load a save playlist for audio playback --" \
+      | _rofi_slim -mesg "-- Load a saved playlist for audio playback --" \
       | xargs | tr '[:upper:]' '[:lower:]')"
    if [ -z "$saved" ]; then
       printf '[Info] Nothing selected or searched\n'
@@ -319,7 +304,7 @@ _loadMenu() {
             exit 1;
          fi
          # selected track is the first one of the playlist
-         _playAudio "$(head -n1 "$PLAYDIR/$saved")"; sleep 3;
+         _playAudio "$(head -n1 "$PLAYDIR/$saved")"; sleep 0.3;
          # append remaining tracks
          local rtracks
          rtracks="$(tail -n $(( $(wc -l "$PLAYDIR/$saved" | awk '{print $1}') - 1 )) "$PLAYDIR/$saved")"
@@ -363,23 +348,23 @@ _searchMenu() {
 # Start ytdl search using keywords, and then start/append to playback
 _startPlay() {
    # youtube-dl search
-   local table
-   table="$(_hashStr "${search}:${NUMBER}")"
+   local query
+   query="$(_hashStr "${search}:${NUMBER}")"
    mkdir -p "$CACHEDIR"
    # if not cached, search it and cache it
    local cache
-   cache="$(_isCachedTable "$table")"
+   cache="$(_isCachedQuery "$query")"
    if [ -z "$cache" ]; then
       youtube-dl --default-search \
          ytsearch"$NUMBER" "$search" --get-id --get-title \
-         2> /dev/null > "$CACHEDIR/$table" &
+         2> /dev/null > "$CACHEDIR/$query" &
       wait "$!"; youtube_dl_exit="$?"
       if [ "$youtube_dl_exit" != "0" ]; then
          printf '[Error] youtube-dl search fail, exit code %s returned\n' "$youtube_dl_exit" >&2
          exit 1
       fi
-      _cacheTable "$table" 2> /dev/null
-      rm -f "$CACHEDIR/$table"
+      _cacheQuery "$query" 2> /dev/null
+      rm -f "$CACHEDIR/$query"
    fi
    # check if ytdl-mpv is already running, if yes append track to playlist
    local args
@@ -394,7 +379,7 @@ _startPlay() {
    # selected track
    local strack
    local rofi_exit
-   strack="$(_getCachedTable "$table" | _rofi "${args[@]}")"
+   strack="$(_getCachedQuery "$query" | _rofi "${args[@]}")"
    rofi_exit="$?"
    if [ -z "$strack" ]; then
       printf '[Info] Nothing selected\n'
@@ -405,7 +390,7 @@ _startPlay() {
    else
       strack="${strack:4}"
       local id
-      id="ytdl://$(_getCachedIdTable "$table" "$strack")"
+      id="ytdl://$(_getCachedIdQuery "$query" "$strack")"
       # check if ytdl socket is idle, if yes append instead play
       if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
          case "${rofi_exit}" in
@@ -418,7 +403,7 @@ _startPlay() {
          _appendTrack "$id";
       fi
       # recursive until explicit exit
-      sleep 1; _startPlay
+      sleep 0.3; _startPlay
    fi
 }
 
