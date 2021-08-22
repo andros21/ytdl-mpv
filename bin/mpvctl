@@ -65,7 +65,7 @@ positional arguments:
   loop-status    get loop status currently playling playlist
   next           play next item in playlist
   playlist       print id | title of tracks
-  prev           play previous item in playlist
+  prev           play prev item in playlist
   remove         remove item number from playlist
   save           save current playlist to given path
   stop           always stop playback
@@ -122,18 +122,20 @@ _getPlaylist() {
          # escape quotes
          trid=$(printf '%s' "$trid" | sed "s/'/''/g")
          # if cache db given, search yt media using it
-         if [ -n "$1" ] && [ -f "$1" ] && [ -n "$2" ]; then
+         if [ -n "$1" ] && [ -f "$1" ]; then
             local db
-            local global_table
             db=$1;
-            global_table=$2;
             # search for track title
             local trtitle
             trtitle="$(sqlite3 "${db}" \
-               "select distinct title from ${global_table} where id='${trid}'" 2> /dev/null)"
+               "select distinct title from main where id='${trid}'" 2> /dev/null)"
             if [ -z "$trtitle" ]; then
                local trtitle
                trtitle=$(youtube-dl --get-filename "$trid" -o "%(title)s" 2> /dev/null)
+               # cache this single search as relative to a NULL query
+               sqlite3 "${db}" \
+                  "insert into main (query,id,title) values ('NULL','${trid}','${trtitle}')" \
+                  2> /dev/null
             fi
          else
             # searching track title, using ytdl
@@ -152,8 +154,8 @@ _getPlaylist() {
       fi
 
       local zerocount
-      zerocount=$(printf '%s\n' "$count" | sed 's/\<[0-9]\>/0&/')
-      printf '%s)%s %s | %s\n' "$zerocount" "$trcurmark" "$trid" "$trtitle"
+      zerocount=$(printf '%s\n' "$((count+1))" | sed 's/\<[0-9]\>/0&/')
+      printf '%s)%s %s\n' "$zerocount" "$trcurmark" "$trtitle"
       count=$((count + 1))
    done
 }
