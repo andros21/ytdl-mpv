@@ -35,13 +35,14 @@
   * Loop playlist
   * Edit current playlist
   * Save/Load current playlist
+  * Help for key bindings
   * ...
 
 ## :rocket: Setup
 
 **Dependencies**
 
-* `awk` `nc` `sqlite3` `xargs`
+* `nc` `sqlite3` `xargs`
 * [`mpv`](https://github.com/mpv-player/mpv)
 * [`rofi`](https://github.com/davatorium/rofi)
 * [`youtube-dl`](https://github.com/ytdl-org/youtube-dl) (always latest version)

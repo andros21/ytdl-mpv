@@ -18,6 +18,12 @@ _rofi() {
 _rofi_slim() {
    rofi -dmenu -no-auto-select -i -width 50 -l 13 -p 'ytdl-mpv > ' "$@"
 }
+_rofi_help() {
+   rofi -dmenu -no-auto-select -i -width 30 -l 5 -p 'ytdl-mpv > ' "$@"
+}
+_rofi_error() {
+   rofi -e "$1"
+}
 _copyId() {
    if [ "$XCLIP" ]; then
       printf '%s' "$1" | xclip -i -selection "clipboard"
@@ -61,17 +67,40 @@ _flushHist() {
       printf '[Info] ytdl-mpv search history flushed\n'
    fi
 }
+_helpPlay() {
+   cat << EOF | _rofi_help -mesg "--  play menu key bindings  --"
+[Enter] | Default action
+[${play_audio}] | Start audio playback
+[${play_video}] | Start video playback
+[${copy_id}] | Copy video id
+EOF
+}
+_helpSearch() {
+   cat << EOF | _rofi_help -mesg "-- search menu key bindings --"
+[Enter] | Search item
+[${re_cache}] | Recache item
+EOF
+}
+_helpEdit() {
+   cat << EOF | _rofi_help -mesg "--  edit menu key bindings  --"
+[Enter] | Play playlist item
+[${remove_track}] | Remove playlist item
+EOF
+}
 
 # Default keybindings
 copy_id="Alt+c"
 default_do='_playAudio'
 play_audio="Alt+a"
 play_video="Alt+v"
+re_cache="Alt+r"
 remove_track="Alt+r"
+key_help="Alt+h"
 
 # Default envs
 CACHEDIR=$HOME/.cache/ytdl-mpv
 DB=$CACHEDIR/ytdl-mpv.sqlite3
+DELAY=0.3
 HISTORY=$HOME/.ytdl-mpv.history
 LINE=16
 NUMBER=20
@@ -83,13 +112,15 @@ XCLIP=1
 # Ensure dependencies
 _checkDep() {
    local deps
-   deps=(mpv mpvctl rofi sqlite3 youtube-dl xclip)
+   deps=(mpv mpvctl nc rofi sqlite3 youtube-dl xargs xclip)
    for dep in "${deps[@]}"; do
       type "$dep" > /dev/null 2>&1 || {
          if [ "$dep" == "xclip" ]; then
             XCLIP=0
          else
-            printf '%s\n' "[Error] Cannot find ${dep} in your \$PATH" >&2
+            local err_msg="[Error] Cannot find ${dep} in your \$PATH"
+            _rofi_error "$err_msg"
+            printf '%s\n' "$err_msg" >&2
             exit 1;
          fi
       }
@@ -99,7 +130,9 @@ _checkDep() {
 # Ensure internet connection is on
 _checkCon() {
    if ! ping -c1 youtube.com &> /dev/null; then
-      printf '[Error] Unable to ping youtube.com, check your connection\n'
+      local err_msg="[Error] Unable to ping youtube.com, check your connection"
+      _rofi_error "$err_msg"
+      printf '%s\n' "$err_msg" >&2
       exit 1;
    fi
 }
@@ -152,7 +185,7 @@ _getView() {
       printf '< Return\n%s' "$(awk '{ print FNR ") " $0 }' < "$1" | sed 's/\<[0-9]\>/0&/')"
    elif [ -d "$1" ]; then
       printf '< Return\n%s' "$(find "$1" -type f -name '*' -exec basename -a -- {} + \
-         | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/')"
+         | sort | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/')"
    else
       return
    fi
@@ -202,10 +235,17 @@ _cacheQuery() {
       | sqlite3 -separator ';' "${DB}" ".import /dev/stdin main" 2> /dev/null
 }
 
+# Delete a cached query inside main table
+_deleteQuery() {
+   local query
+   query="$1"
+   sqlite3 "${DB}" "delete from main where query='${query}'" 2> /dev/null
+}
+
 # ytdl-mpv main interactive menu
 _mainMenu() {
    local action
-   action="$(_getMainMenu | _rofi_slim -mesg "-- main menu, select an action --" \
+   action="$(_getMainMenu | _rofi_slim -mesg "-- main menu: select an action --" \
       | awk '{$1=tolower($1);print $1}')"
    action="${action::2}"
    case "$action" in
@@ -230,7 +270,9 @@ _mainMenu() {
 # display playlist state, possible actions remove or select a track from playlist
 _editMenu() {
       local args
-      args=( -mesg "Loop: $(_ytdl_mpvctl loop-status) -- [Enter] to play a track, [Alt+r] to remove a track --" -kb-custom-1 "${remove_track}" )
+      args=( -mesg "-- loop [$(_ytdl_mpvctl loop-status)] -- edit menu: edit playlist, help [Alt+h] --"
+             -kb-custom-1 "${remove_track}"
+             -kb-custom-4 "${key_help}" )
       # get current playlist
       local pl
       pl="$(_ytdl_mpvctl playlist "${DB}")"
@@ -238,22 +280,27 @@ _editMenu() {
       local rofi_exit
       str="$(printf '< Return\n%s' "${pl}" | _rofi "${args[@]}")"
       rofi_exit="$?"
-      if [ -z "$str" ]; then
-         printf '[Info] Nothing selected\n'
-         exit 0
-      elif [ "${str::1}" == "<" ]; then
-         printf '[Info] Back to search menu\n'
-         _mainMenu;
+      # check if help requested
+      if [[ "${rofi_exit}" -eq 13 ]];
+         then _helpEdit; _editMenu;
       else
-         local stn
-         # get track number
-         stn="$(printf '%s' "${str::2}" | sed 's/^0*//')"
-         case "${rofi_exit}" in
-            0)  _ytdl_mpvctl track "$((stn-1))";;
-            10) _ytdl_mpvctl rm "$((stn-1))";;
-         esac
-         # recursive until explicit exit
-         sleep 0.3; _editMenu
+         if [ -z "$str" ]; then
+            printf '[Info] Nothing selected\n'
+            exit 0
+         elif [ "${str::1}" == "<" ]; then
+            printf '[Info] Back to search menu\n'
+            _mainMenu;
+         else
+            local stn
+            # get track number
+            stn="$(printf '%s' "${str::2}" | sed 's/^0*//')"
+            case "${rofi_exit}" in
+               0)  _ytdl_mpvctl track "$((stn-1))";;
+               10) _ytdl_mpvctl rm "$((stn-1))";;
+            esac
+            # recursive until explicit exit
+            sleep $DELAY; _editMenu
+         fi
       fi
 }
 
@@ -264,7 +311,7 @@ _saveMenu() {
    # saved playlists
    local saved
    saved="$(_getView "${PLAYDIR}" \
-      | _rofi_slim -mesg "-- Save the current playlist as --" \
+      | _rofi_slim -mesg "-- save menu: save current playlist as --" \
       | xargs | tr '[:upper:]' '[:lower:]')"
    if [ -z "$saved" ]; then
       printf '[Info] Nothing selected or searched\n'
@@ -285,7 +332,7 @@ _loadMenu() {
    # saved playlists
    local saved
    saved="$(_getView "${PLAYDIR}" \
-      | _rofi_slim -mesg "-- Load a saved playlist for audio playback --" \
+      | _rofi_slim -mesg "-- load menu: load playlist for audio playback --" \
       | xargs | tr '[:upper:]' '[:lower:]')"
    if [ -z "$saved" ]; then
       printf '[Info] Nothing selected or searched\n'
@@ -300,11 +347,13 @@ _loadMenu() {
       if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
          # check if playlist file exist
          if [ ! -f "$PLAYDIR/$saved" ]; then
-            printf '[Error] Invalid path given\n' >&2
+            local err_msg="[Error] Invalid path given"
+            _rofi_error "$err_msg"
+            printf '%s\n' "$err_msg" >&2
             exit 1;
          fi
          # selected track is the first one of the playlist
-         _playAudio "$(head -n1 "$PLAYDIR/$saved")"; sleep 0.3;
+         _playAudio "$(head -n1 "$PLAYDIR/$saved")"; sleep $DELAY;
          # append remaining tracks
          local rtracks
          rtracks="$(tail -n $(( $(wc -l "$PLAYDIR/$saved" | awk '{print $1}') - 1 )) "$PLAYDIR/$saved")"
@@ -320,28 +369,41 @@ _loadMenu() {
 # Search menu,
 # select keywords from history, start a search
 _searchMenu() {
+   local args
+   args=( -mesg "-- search menu: search something, help [Alt+h] --"
+          -kb-custom-1 "${re_cache}"
+          -kb-custom-4 "${key_help}" )
    if [ -n "$HISTORY" ]; then touch "$HISTORY"; fi;
-   # select from history or type something,
-   # trim white spaces and lower case
-   search="$(_getView "$HISTORY" | _rofi_slim -mesg "-- Search something or select from yt history --" \
-      | xargs -0 | tr '[:upper:]' '[:lower:]')"
-   if [ -z "$search" ]; then
-      printf '[Info] Nothing selected or searched\n'
-      exit 0;
-   elif [ "${search::1}" == "<" ]; then
-      printf '[Info] Back to main menu\n'
-      _mainMenu;
+   # select from history or type something
+   local rofi_exit
+   search="$(_getView "$HISTORY" | _rofi_slim "${args[@]}")"
+   rofi_exit="$?"
+   # check if help requested
+   if [[ "${rofi_exit}" -eq 13 ]];
+      then _helpSearch; _searchMenu;
    else
-      # slice only selected items and not typed items
-      if [[ $search =~ ^[0-9][0-9]\)\ (.*)$ ]]; then search="${search:4}"; fi;
-      # remove trailing spaces
-      printf '%s\n' "$search" | sed 's/[ \t]*$//' >> "$HISTORY"
-      # unique and sorted entries inside history
-      local new_hist
-      new_hist="$(sort -u "$HISTORY")"
-      printf '%s\n' "$new_hist" > "$HISTORY"
-      printf '[Info] Searching for ... %s\n' "${search}"
-      _startPlay
+      # check if this search must be recached
+      if [ "${rofi_exit}" -eq 10 ]; then to_recache=1; else to_recache=0; fi
+      # trim white spaces and lower case
+      search="$(printf '%s' "$search" | xargs -0 | tr '[:upper:]' '[:lower:]')"
+      if [ -z "$search" ]; then
+         printf '[Info] Nothing selected or searched\n'
+         exit 0;
+      elif [ "${search::1}" == "<" ]; then
+         printf '[Info] Back to main menu\n'
+         _mainMenu;
+      else
+         # slice only selected items and not typed items
+         if [[ $search =~ ^[0-9][0-9]\)\ (.*)$ ]]; then search="${search:4}"; fi;
+         # remove trailing spaces
+         printf '%s\n' "$search" | sed 's/[ \t]*$//' >> "$HISTORY"
+         # unique and sorted entries inside history
+         local new_hist
+         new_hist="$(sort -u "$HISTORY")"
+         printf '%s\n' "$new_hist" > "$HISTORY"
+         printf '[Info] Searching for ... %s\n' "${search}"
+         _startPlay
+      fi
    fi
 }
 
@@ -351,16 +413,20 @@ _startPlay() {
    local query
    query="$(_hashStr "${search}:${NUMBER}")"
    mkdir -p "$CACHEDIR"
-   # if not cached, search it and cache it
+   # if not cached or marked as to_recache
+   # search it and cache it
    local cache
    cache="$(_isCachedQuery "$query")"
-   if [ -z "$cache" ]; then
+   if [ -z "$cache" ] || [ "$to_recache" -eq 1 ]; then
+      if [ "$to_recache" -eq 1 ]; then _deleteQuery "$query"; fi
       youtube-dl --default-search \
          ytsearch"$NUMBER" "$search" --get-id --get-title \
          2> /dev/null > "$CACHEDIR/$query" &
       wait "$!"; youtube_dl_exit="$?"
-      if [ "$youtube_dl_exit" != "0" ]; then
-         printf '[Error] youtube-dl search fail, exit code %s returned\n' "$youtube_dl_exit" >&2
+      if [ ! "$youtube_dl_exit" -eq 0 ]; then
+         local err_msg="[Error] youtube-dl search fail, exit code ${youtube_dl_exit}"
+         _rofi_error "$err_msg"
+         printf '%s\n' "$err_msg" >&2
          exit 1
       fi
       _cacheQuery "$query" 2> /dev/null
@@ -369,41 +435,47 @@ _startPlay() {
    # check if ytdl-mpv is already running, if yes append track to playlist
    local args
    if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
-      args=( -mesg "-- [Alt+a] start audio playback, [Alt+v] start video playback --"
-                   -kb-custom-1 "${play_audio}"
-                   -kb-custom-2 "${play_video}"
-                   -kb-custom-3 "${copy_id}" )
+      args=( -mesg "-- play menu: start audio or video playback, help [Alt+h] --"
+             -kb-custom-1 "${play_audio}"
+             -kb-custom-2 "${play_video}"
+             -kb-custom-3 "${copy_id}"
+             -kb-custom-4 "${key_help}" )
    else
-      args=( -mesg "-- Add a track to the current playlist, simply [Enter] --" )
+      args=( -mesg "-- play menu: add track to current playlist, simply [Enter] --" )
    fi
    # selected track
    local strack
    local rofi_exit
    strack="$(_getCachedQuery "$query" | _rofi "${args[@]}")"
    rofi_exit="$?"
-   if [ -z "$strack" ]; then
-      printf '[Info] Nothing selected\n'
-      exit 0
-   elif [ "${strack::1}" == "<" ]; then
-      printf '[Info] Back to search menu\n'
-      _searchMenu;
+   # check if help requested
+   if [[ "${rofi_exit}" -eq 13 ]];
+      then _helpPlay; _startPlay;
    else
-      strack="${strack:4}"
-      local id
-      id="ytdl://$(_getCachedIdQuery "$query" "$strack")"
-      # check if ytdl socket is idle, if yes append instead play
-      if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
-         case "${rofi_exit}" in
-            0) "${default_do}" "$id";;
-            10)     _playAudio "$id";;
-            11)     _playVideo "$id";;
-            12)        _copyId "$id";;
-         esac
+      if [ -z "$strack" ]; then
+         printf '[Info] Nothing selected\n'
+         exit 0
+      elif [ "${strack::1}" == "<" ]; then
+         printf '[Info] Back to search menu\n'
+         _searchMenu;
       else
-         _appendTrack "$id";
+         strack="${strack:4}"
+         local id
+         id="ytdl://$(_getCachedIdQuery "$query" "$strack")"
+         # check if ytdl socket is idle, if yes append instead play
+         if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
+            case "${rofi_exit}" in
+               0) "${default_do}" "$id";;
+               10)     _playAudio "$id";;
+               11)     _playVideo "$id";;
+               12)        _copyId "$id";;
+            esac
+         else
+            _appendTrack "$id";
+         fi
+         # recursive until explicit exit
+         sleep $DELAY; _startPlay
       fi
-      # recursive until explicit exit
-      sleep 0.3; _startPlay
    fi
 }
 
