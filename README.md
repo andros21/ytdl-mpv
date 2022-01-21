@@ -2,7 +2,7 @@
 <br>
 <p align="center">
   <a href="https://github.com/andros21/ytdl-mpv">
-    <img src="https://user-images.githubusercontent.com/58751603/127172656-40c7adf1-b6de-4985-a1c0-14a2e58dc6f3.png" alt="Logo" width="470px">
+    <img src="https://user-images.githubusercontent.com/58751603/150547344-fd1cc00b-a743-4657-b742-9a6b6f5e8df0.png" alt="Logo" width="470px">
   </a>
   <br>
   <a href="https://github.com/andros21/ytdl-mpv/blob/master/.github/workflows/lint.yml">
