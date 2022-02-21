@@ -13,13 +13,7 @@
 
 # Default functions
 _rofi() {
-   rofi -dmenu -no-auto-select -i -width "${WIDTH}" -l "${LINE}" -p 'ytdl-mpv > ' "$@"
-}
-_rofi_slim() {
-   rofi -dmenu -no-auto-select -i -width 50 -l 13 -p 'ytdl-mpv > ' "$@"
-}
-_rofi_help() {
-   rofi -dmenu -no-auto-select -i -width 30 -l 5 -p 'ytdl-mpv > ' "$@"
+   rofi -dmenu -no-auto-select -i -p "$PROMPT" "$@"
 }
 _rofi_error() {
    rofi -e "$1"
@@ -27,7 +21,7 @@ _rofi_error() {
 _copyId() {
    if [ "$XCLIP" ]; then
       printf '%s' "$1" | xclip -i -selection "clipboard"
-      printf '[Info] Copy in clipboard ... %s\n' "${1:7}"
+      _info "Copy in clipboard ... ${1:7}"
    fi
 }
 _ytdl_mpvctl() {
@@ -35,40 +29,32 @@ _ytdl_mpvctl() {
 }
 _playAudio() {
    mpv --no-terminal --input-ipc-server="${SOCKET}" --ytdl-format=bestaudio "$1" &> /dev/null &
-   printf '[Info] Audio playback ... %s\n' "${1:7}"
+   _info "Audio playback ... ${1:7}"
 }
 _playVideo() {
    mpv --input-ipc-server="$SOCKET" \
        --ytdl-format="bestvideo[height<=?720][fps<=?30][vcodec!=?vp9]+bestaudio/best" "$1" &> /dev/null &
-   printf '[Info] Video playback ... %s\n' "${1:7}"
+   _info "Video playback ... ${1:7}"
 }
 _appendTrack() {
-   if _ytdl_mpvctl add "$1"; then
-      printf '[Info] Add track to cur playlist ... %s\n' "${1:7}"
-   fi
+   _ytdl_mpvctl add "$1" && _info "Add track to cur playlist ... ${1:7}"
 }
 _savePlaylist() {
-   if _ytdl_mpvctl save "$1"; then
-      printf '[Info] Current playlist saved to ... %s\n' "$1"
-   fi
+   _ytdl_mpvctl save "$1" && _info "Current playlist saved to ... \"$1\""
 }
 _loadPlaylist() {
-   if _ytdl_mpvctl load "$1"; then
-      printf '[Info] Playlist loaded from ... %s\n' "$1"
-   fi
+   _ytdl_mpvctl load "$1" && _info "Playlist loaded from ... \"$1\""
 }
 _flushCache() {
-   if rm -fr "$CACHEDIR"; then
-      printf '[Info] ytdl-mpv cache flushed\n'
-   fi
+   rm -fr "$CACHEDIR" && _info "ytdl-mpv cache flushed"
 }
 _flushHist() {
-   if rm -fr "$HISTORY"; then
-      printf '[Info] ytdl-mpv search history flushed\n'
-   fi
+   rm -fr "$HISTORY" && _info "ytdl-mpv search history flushed"
 }
 _helpPlay() {
-   cat << EOF | _rofi_help -mesg "--  play menu key bindings  --"
+   local STYLE="window {width: 30%;} listview {lines: 5;}"
+   cat << EOF | \
+   _rofi -theme-str "$STYLE" -mesg "--  play menu key bindings  --" > /dev/null
 [Enter] | Default action
 [${play_audio}] | Start audio playback
 [${play_video}] | Start video playback
@@ -76,13 +62,17 @@ _helpPlay() {
 EOF
 }
 _helpSearch() {
-   cat << EOF | _rofi_help -mesg "-- search menu key bindings --"
+   local STYLE="window {width: 30%;} listview {lines: 5;}"
+   cat << EOF | \
+   _rofi -theme-str "$STYLE" -mesg "-- search menu key bindings --" > /dev/null
 [Enter] | Search item
 [${re_cache}] | Recache item
 EOF
 }
 _helpEdit() {
-   cat << EOF | _rofi_help -mesg "--  edit menu key bindings  --"
+   local STYLE="window {width: 30%;} listview {lines: 5;}"
+   cat << EOF | \
+   _rofi -theme-str "$STYLE" -mesg "--  edit menu key bindings  --" > /dev/null
 [Enter] | Play playlist item
 [${remove_track}] | Remove playlist item
 EOF
@@ -102,12 +92,26 @@ CACHEDIR=$HOME/.cache/ytdl-mpv
 DB=$CACHEDIR/ytdl-mpv.sqlite3
 DELAY=0.3
 HISTORY=$HOME/.ytdl-mpv.history
-LINE=16
+LINEN=16
 NUMBER=20
 PLAYDIR=$HOME/.local/share/ytdl-mpv
+PROMPT='ytdl-mpv > '
 SOCKET=/tmp/ytdl-mpv.sock
 WIDTH=70
 XCLIP=1
+
+# Error function
+_die() {
+   local err_msg="[Error] $*"
+   _rofi_error "$err_msg"
+   printf '%s\n' "$err_msg" >&2
+   exit 1
+}
+
+# Info function
+_info() {
+   printf '[Info] %s\n' "$@"
+}
 
 # Ensure dependencies
 _checkDep() {
@@ -118,10 +122,7 @@ _checkDep() {
          if [ "$dep" == "xclip" ]; then
             XCLIP=0
          else
-            local err_msg="[Error] Cannot find ${dep} in your \$PATH"
-            _rofi_error "$err_msg"
-            printf '%s\n' "$err_msg" >&2
-            exit 1;
+            _die "Cannot find ${dep} in your \$PATH"
          fi
       }
    done
@@ -129,27 +130,22 @@ _checkDep() {
 
 # Ensure internet connection is on
 _checkCon() {
-   if ! ping -c1 youtube.com &> /dev/null; then
-      local err_msg="[Error] Unable to ping youtube.com, check your connection"
-      _rofi_error "$err_msg"
-      printf '%s\n' "$err_msg" >&2
-      exit 1;
-   fi
+   ping -c1 youtube.com &> /dev/null || _die "Unable to ping youtube.com, check your connection"
 }
 
 # Usage (help) message
 _usage() {
     cat >&2 << EOF
-usage: $(basename "$0") [-h] [--number NUMBER] [--line LINE] [--socket SOCKET] [--width WIDTH]
+usage: $(basename "$0") [-h] [--number NUMBER] [--linen LINEN] [--socket SOCKET] [--width WIDTH]
 
 YTDL-MPV - Browse and play yt contents from rofi using ytdl and mpv
 
 optional arguments:
   -h, --help            show this help message and exit
   -n, --number NUMBER   search results number [default ${NUMBER}]
-  -l, --line LINE       number of rofi vertical line [default ${LINE}]
-  -s, --socket SOCKET   mpv socket path [default ${SOCKET}]
-  -w, --width WIDTH     rofi width [default ${WIDTH}]
+  -l, --linen  LINEN    rofi vertical lines number [default ${LINEN}]
+  -s, --socket SOCKET   mpv socket path [default "${SOCKET}"]
+  -w, --width  WIDTH    rofi width [default ${WIDTH}]
 EOF
 }
 
@@ -245,7 +241,9 @@ _deleteQuery() {
 # ytdl-mpv main interactive menu
 _mainMenu() {
    local action
-   action="$(_getMainMenu | _rofi_slim -mesg "-- main menu: select an action --" \
+   local STYLE="window {width: 50%;} listview {lines: 13;}"
+   action="$(_getMainMenu \
+      | _rofi -theme-str "$STYLE" -mesg "-- main menu: select an action --" \
       | awk '{$1=tolower($1);print $1}')"
    action="${action::2}"
    case "$action" in
@@ -261,18 +259,22 @@ _mainMenu() {
       pv)  _ytdl_mpvctl prev;;
       sp)  _ytdl_mpvctl stop;;
       sv)  _saveMenu;;
-      \<)  printf '[Info] Quitting\n'; exit 0;;
-      *)   printf '[Info] Nothing selected\n'; exit 0;;
+      \<)  _info "Quitting"; exit 0;;
+      *)   _info "Nothing selected"; exit 0;;
    esac
 }
 
 # Edit menu,
 # display playlist state, possible actions remove or select a track from playlist
 _editMenu() {
+      # check sock status using loop status command
+      _ytdl_mpvctl loop-status &> /dev/null || exit 1
       local args
-      args=( -mesg "-- loop [$(_ytdl_mpvctl loop-status)] -- edit menu: edit playlist, help [Alt+h] --"
-             -kb-custom-1 "${remove_track}"
-             -kb-custom-4 "${key_help}" )
+      local STYLE="window {width: ${WIDTH}%;} listview {lines: ${LINEN};}"
+      args=( -kb-custom-1 "${remove_track}"
+             -kb-custom-4 "${key_help}"
+             -theme-str "$STYLE"
+             -mesg "-- loop [$(_ytdl_mpvctl loop-status)] -- edit menu: edit playlist, help [Alt+h] --" )
       # get current playlist
       local pl
       pl="$(_ytdl_mpvctl playlist "${DB}")"
@@ -281,23 +283,26 @@ _editMenu() {
       str="$(printf '< Return\n%s' "${pl}" | _rofi "${args[@]}")"
       rofi_exit="$?"
       # check if help requested
-      if [[ "${rofi_exit}" -eq 13 ]];
-         then _helpEdit; _editMenu;
+      if [[ "${rofi_exit}" -eq 13 ]]; then
+         _helpEdit; _editMenu;
       else
          if [ -z "$str" ]; then
-            printf '[Info] Nothing selected\n'
+            _info "Nothing selected"
             exit 0
          elif [ "${str::1}" == "<" ]; then
-            printf '[Info] Back to search menu\n'
+            _info "Back to main menu"
             _mainMenu;
          else
-            local stn
-            # get track number
-            stn="$(printf '%s' "${str::2}" | sed 's/^0*//')"
-            case "${rofi_exit}" in
-               0)  _ytdl_mpvctl track "$((stn-1))";;
-               10) _ytdl_mpvctl rm "$((stn-1))";;
-            esac
+            # if match in playlist
+            (printf '%s' "$pl" | grep "$str" &> /dev/null) && {
+               local stn
+               # get track number
+               stn="$(printf '%s' "${str::2}" | sed 's/^0*//')"
+               case "${rofi_exit}" in
+                  0)  _ytdl_mpvctl track "$((stn-1))";;
+                  10) _ytdl_mpvctl rm "$((stn-1))";;
+               esac
+            }
             # recursive until explicit exit
             sleep $DELAY; _editMenu
          fi
@@ -310,14 +315,15 @@ _saveMenu() {
    mkdir -p "$PLAYDIR"
    # saved playlists
    local saved
+   local STYLE="window {width: 50%;} listview {lines: 13;}"
    saved="$(_getView "${PLAYDIR}" \
-      | _rofi_slim -mesg "-- save menu: save current playlist as --" \
+      | _rofi -theme-str "$STYLE" -mesg "-- save menu: save current playlist as --" \
       | xargs | tr '[:upper:]' '[:lower:]')"
    if [ -z "$saved" ]; then
-      printf '[Info] Nothing selected or searched\n'
-      exit 0;
+      _info "Nothing selected or searched"
+      exit 0
    elif [ "${saved::1}" == "<" ]; then
-      printf '[Info] Back to main menu\n'
+      _info "Back to main menu"
       _mainMenu;
    else
       # slice only selected items and not typed items
@@ -331,14 +337,15 @@ _saveMenu() {
 _loadMenu() {
    # saved playlists
    local saved
+   local STYLE="window {width: 50%;} listview {lines: 13;}"
    saved="$(_getView "${PLAYDIR}" \
-      | _rofi_slim -mesg "-- load menu: load playlist for audio playback --" \
+      | _rofi -theme-str "$STYLE" -mesg "-- load menu: load playlist for audio playback --" \
       | xargs | tr '[:upper:]' '[:lower:]')"
    if [ -z "$saved" ]; then
-      printf '[Info] Nothing selected or searched\n'
-      exit 0;
+      _info "Nothing selected or searched"
+      exit 0
    elif [ "${saved::1}" == "<" ]; then
-      printf '[Info] Back to main menu\n'
+      _info "Back to main menu"
       _mainMenu;
    else
       # slice only selected items and not typed items
@@ -346,12 +353,7 @@ _loadMenu() {
       # check if ytdl socket is idle, if yes append instead play
       if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
          # check if playlist file exist
-         if [ ! -f "$PLAYDIR/$saved" ]; then
-            local err_msg="[Error] Invalid path given"
-            _rofi_error "$err_msg"
-            printf '%s\n' "$err_msg" >&2
-            exit 1;
-         fi
+         [[ -f "$PLAYDIR/$saved" ]] || _die "Invalid path given"
          # selected track is the first one of the playlist
          _playAudio "$(head -n1 "$PLAYDIR/$saved")"; sleep $DELAY;
          # append remaining tracks
@@ -369,28 +371,30 @@ _loadMenu() {
 # Search menu,
 # select keywords from history, start a search
 _searchMenu() {
+   touch "$HISTORY"
    local args
-   args=( -mesg "-- search menu: search something, help [Alt+h] --"
-          -kb-custom-1 "${re_cache}"
-          -kb-custom-4 "${key_help}" )
-   if [ -n "$HISTORY" ]; then touch "$HISTORY"; fi;
-   # select from history or type something
    local rofi_exit
-   search="$(_getView "$HISTORY" | _rofi_slim "${args[@]}")"
+   local STYLE="window {width: 50%;} listview {lines: 13;}"
+   args=( -kb-custom-1 "${re_cache}"
+          -kb-custom-4 "${key_help}"
+          -theme-str "$STYLE"
+          -mesg "-- search menu: search something, help [Alt+h] --" )
+   # select from history or type something
+   search="$(_getView "$HISTORY" | _rofi "${args[@]}")"
    rofi_exit="$?"
    # check if help requested
-   if [[ "${rofi_exit}" -eq 13 ]];
-      then _helpSearch; _searchMenu;
+   if [[ "${rofi_exit}" -eq 13 ]]; then
+      _helpSearch; _searchMenu;
    else
       # check if this search must be recached
       if [ "${rofi_exit}" -eq 10 ]; then to_recache=1; else to_recache=0; fi
       # trim white spaces and lower case
       search="$(printf '%s' "$search" | xargs -0 | tr '[:upper:]' '[:lower:]')"
       if [ -z "$search" ]; then
-         printf '[Info] Nothing selected or searched\n'
-         exit 0;
+         _info "Nothing selected or searched"
+         exit 0
       elif [ "${search::1}" == "<" ]; then
-         printf '[Info] Back to main menu\n'
+         _info "Back to main menu"
          _mainMenu;
       else
          # slice only selected items and not typed items
@@ -401,7 +405,7 @@ _searchMenu() {
          local new_hist
          new_hist="$(sort -u "$HISTORY")"
          printf '%s\n' "$new_hist" > "$HISTORY"
-         printf '[Info] Searching for ... %s\n' "${search}"
+         _info "Searching for ... ${search}"
          _startPlay
       fi
    fi
@@ -423,25 +427,23 @@ _startPlay() {
          ytsearch"$NUMBER" "$search" --get-id --get-title \
          2> /dev/null > "$CACHEDIR/$query" &
       wait "$!"; youtube_dl_exit="$?"
-      if [ ! "$youtube_dl_exit" -eq 0 ]; then
-         local err_msg="[Error] youtube-dl search fail, exit code ${youtube_dl_exit}"
-         _rofi_error "$err_msg"
-         printf '%s\n' "$err_msg" >&2
-         exit 1
-      fi
+      [[ "$youtube_dl_exit" -eq 0 ]] || _die "youtube-dl search fail, exit code ${youtube_dl_exit}"
       _cacheQuery "$query" 2> /dev/null
       rm -f "$CACHEDIR/$query"
    fi
    # check if ytdl-mpv is already running, if yes append track to playlist
    local args
+   local STYLE="window {width: ${WIDTH}%;} listview {lines: ${LINEN};}"
    if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
-      args=( -mesg "-- play menu: start audio or video playback, help [Alt+h] --"
-             -kb-custom-1 "${play_audio}"
+      args=( -kb-custom-1 "${play_audio}"
              -kb-custom-2 "${play_video}"
              -kb-custom-3 "${copy_id}"
-             -kb-custom-4 "${key_help}" )
+             -kb-custom-4 "${key_help}"
+             -theme-str "$STYLE"
+             -mesg "-- play menu: start audio or video playback, help [Alt+h] --" )
    else
-      args=( -mesg "-- play menu: add track to current playlist, simply [Enter] --" )
+      args=( -theme-str "$STYLE"
+             -mesg "-- play menu: add track to current playlist, simply [Enter] --" )
    fi
    # selected track
    local strack
@@ -449,30 +451,34 @@ _startPlay() {
    strack="$(_getCachedQuery "$query" | _rofi "${args[@]}")"
    rofi_exit="$?"
    # check if help requested
-   if [[ "${rofi_exit}" -eq 13 ]];
-      then _helpPlay; _startPlay;
+   if [[ "${rofi_exit}" -eq 13 ]]; then
+      _helpPlay; _startPlay;
    else
       if [ -z "$strack" ]; then
-         printf '[Info] Nothing selected\n'
+         _info "Nothing selected"
          exit 0
       elif [ "${strack::1}" == "<" ]; then
-         printf '[Info] Back to search menu\n'
+         _info "Back to search menu"
          _searchMenu;
       else
          strack="${strack:4}"
          local id
-         id="ytdl://$(_getCachedIdQuery "$query" "$strack")"
-         # check if ytdl socket is idle, if yes append instead play
-         if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
-            case "${rofi_exit}" in
-               0) "${default_do}" "$id";;
-               10)     _playAudio "$id";;
-               11)     _playVideo "$id";;
-               12)        _copyId "$id";;
-            esac
-         else
-            _appendTrack "$id";
-         fi
+         id="$(_getCachedIdQuery "$query" "$strack")"
+         # if not empty
+         [[ -n "$id" ]] && {
+            id="ytdl://$id"
+            # check if ytdl socket is idle, if yes append instead play
+            if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
+               case "${rofi_exit}" in
+                  0) "${default_do}" "$id";;
+                  10)     _playAudio "$id";;
+                  11)     _playVideo "$id";;
+                  12)        _copyId "$id";;
+               esac
+            else
+               _appendTrack "$id";
+            fi
+         }
          # recursive until explicit exit
          sleep $DELAY; _startPlay
       fi
@@ -482,15 +488,15 @@ _startPlay() {
 
 # Parse optional argument
 while :; do
-    case "$1" in
-        -n|--number)   shift; [ -n "$1" ] && [[ $1 =~ ^[0-9]+$ ]] && NUMBER="$1";;
-        -l|--line)     shift; [ -n "$1" ] && [[ $1 =~ ^[0-9]+$ ]] && LINE="$1";;
-        -h|--help)     shift; _usage; exit 0;;
-        -s|--socket)   shift; [ -n "$1" ] && SOCKET="$1";;
-        -w|--width)    shift; [ -n "$1" ] && [[ $1 =~ ^[0-9]+$ ]] && WIDTH="$1";;
-        *)             break;;
-    esac
-    shift
+   case "$1" in
+      -n|--number)   shift; [ -n "$1" ] && [[ $1 =~ ^[0-9]+$ ]] && NUMBER="$1";;
+      -l|--linen)    shift; [ -n "$1" ] && [[ $1 =~ ^[0-9]+$ ]] && LINEN="$1";;
+      -h|--help)     shift; _usage; exit 0;;
+      -s|--socket)   shift; [ -n "$1" ] && SOCKET="$1";;
+      -w|--width)    shift; [ -n "$1" ] && [[ $1 =~ ^[0-9]+$ ]] && WIDTH="$1";;
+      *)             break;;
+   esac
+   shift
 done
 
 _checkDep   # Run deps test

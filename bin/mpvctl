@@ -16,43 +16,34 @@
 # Default envs
 SOCKET=/tmp/mpv.sock
 
+# Error function
+_die() {
+   printf '[Error] %s\n' "$@" >&2
+   exit 1
+}
+
 # Ensure dependencies
 _checkDep() {
-   type mpv > /dev/null 2>&1 || {
-      printf '%s\n' "[Error] Cannot find mpv in your \$PATH" >&2
-      exit 1
-   }
-   type youtube-dl > /dev/null 2>&1 || {
-      printf '%s\n' "[Error] Cannot find youtube-dl in your \$PATH" >&2
-      exit 1
-   }
+   type mpv > /dev/null 2>&1 || _die "Cannot find mpv in your \$PATH"
+   type youtube-dl > /dev/null 2>&1 || _die "Cannot find youtube-dl in your \$PATH"
    type nc > /dev/null 2>&1 && SOCKCMD="nc -U -N $SOCKET"
    type socat > /dev/null 2>&1 && SOCKCMD="socat - $SOCKET"
-   [ "$SOCKCMD" ] || {
-      printf '%s\n' "[Error] Cannot find socat or nc in your \$PATH. Install before continue" >&2
-      exit 1
-   }
+   [ "$SOCKCMD" ] || _die "Cannot find socat or nc in your \$PATH. Install before continue"
 }
 
 # Check if sock is idle, otherwise exit
 _checkSock() {
-   if [ ! -S $SOCKET  ]; then
-      printf '[Error] Cannot find mpv socket file\n' >&2
-      exit 1
-   fi
+   [[ -S $SOCKET  ]] || _die "Cannot find mpv socket file"
    local return_code
    printf '{ "command:" [ "get_version" ] }' | $SOCKCMD &> /dev/null
    return_code=$?
-   if [ ! "$return_code" -eq 0 ]; then
-      printf '[Error] Cannot connect to mpv socket, connection refused\n' >&2
-      exit 1
-   fi
+   [[ "$return_code" -eq 0 ]] ||  _die "Cannot connect to mpv socket, connection refused"
 }
 
 # Usage (help) message
 _usage() {
     cat >&2 << EOF
-usage: $(basename "$0") [-h] [--sock] SOCKET action
+usage: $(basename "$0") [-h] [--socket SOCKET] action
 
 MPVCTL - mpv cli ipc-json frontend
 
@@ -62,11 +53,11 @@ positional arguments:
   clear          playlist clear
   load           load a playlist from given path
   loop           loop/unloop currently playing playlist
-  loop-status    get loop status currently playling playlist
+  loop-status    get loop status currently playing playlist
   next           play next item in playlist
-  playlist       print id | title of tracks
+  playlist       print sorted list of tracks
   prev           play prev item in playlist
-  remove         remove item number from playlist
+  rm             remove item number from playlist
   save           save current playlist to given path
   stop           always stop playback
   toggle         toggle playback
@@ -96,6 +87,7 @@ _getSock() {
 
 # Get current playlist formatted and sorted
 _getPlaylist() {
+   _checkSock
    # track numbers
    local trnum
    trnum=$(_getProperty 'get_property_string' 'playlist-count')
@@ -143,7 +135,7 @@ _getPlaylist() {
             trtitle=$(youtube-dl --get-filename "$trid" -o "%(title)s" 2> /dev/null)
          fi
          if [ -z "$trtitle" ]; then
-            printf '[Error] youtube-dl title search fail\n' >&2
+            printf "[Warning] youtube-dl title search fail\n" >&2
             local trtitle
             trtitle="NULL"
          fi
@@ -162,18 +154,12 @@ _getPlaylist() {
 
 # Save current playlist to given file
 _savePlaylist() {
-   if [ -z "$1" ]; then
-      printf '[Error] None path given\n' >&2
-      exit 1
-   fi
-   if [ ! -d "$(dirname "$1")" ]; then
-      printf '[Error] Invalid path given\n' >&2
-      exit 1
-   fi
+   _checkSock
+   [[ -n "$1" ]] || _die 'None path given'
+   [[ -d "$(dirname "$1")" ]] || _die 'Invalid path given'
    # track numbers
    local trnum
    trnum=$(_getProperty 'get_property_string' 'playlist-count')
-
    local count
    count=0
    while [ "$count" -lt "$trnum" ]; do
@@ -187,15 +173,8 @@ _savePlaylist() {
 
 # Load playlist from given file
 _loadPlaylist() {
-   if [ -z "$1" ]; then
-      printf '[Error] None path given\n' >&2
-      exit 1
-   fi
-   if [ ! -f "$1" ]; then
-      printf '[Error] Invalid path given\n' >&2
-      exit 1
-   fi
-
+   [[ -n "$1" ]] || _die 'None path given'
+   [[ -f "$1" ]] || _die 'Invalid path given'
    for track in $(<"$1"); do
       _setProperty 'loadfile' "$track" 'append-play'
    done
