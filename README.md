@@ -44,8 +44,8 @@
 
 * `nc` `sqlite3` `xargs`
 * [`mpv`](https://github.com/mpv-player/mpv)
-* [`rofi`](https://github.com/davatorium/rofi)
-* [`youtube-dl`](https://github.com/ytdl-org/youtube-dl) (always latest version)
+* [`rofi>=1.6.1`](https://github.com/davatorium/rofi)
+* [`youtube-dl==latest`](https://github.com/ytdl-org/youtube-dl)
 
 **Opt dependencies**
 
@@ -58,7 +58,7 @@ Simply make it
 ```
 git clone https://github.com/andros21/ytdl-mpv
 cd ytdl-mpv
-make
+make install
 ```
 
 ## :runner: Run
