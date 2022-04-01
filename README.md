@@ -1,10 +1,10 @@
 <!-- PROJECT LOGO -->
 <br>
-<p align="center">
+<div align="center">
   <a href="https://github.com/andros21/ytdl-mpv">
     <img src="https://user-images.githubusercontent.com/58751603/150547344-fd1cc00b-a743-4657-b742-9a6b6f5e8df0.png" alt="Logo" width="470px">
   </a>
-  <br>
+  <h4 align="center">Rofi script to browse and play YouTube contents <br>using <a href="https://github.com/ytdl-org/youtube-dl/">youtube-dl</a> and <a href="https://github.com/mpv-player/mpv">mpv</a></h4>
   <a href="https://github.com/andros21/ytdl-mpv/blob/master/.github/workflows/lint.yml">
     <img src="https://img.shields.io/github/workflow/status/andros21/ytdl-mpv/Lint%20CI/master?label=Lint%20CI&logo=github&style=flat-square" alt="Lint CI">
   </a>
@@ -15,15 +15,14 @@
     <img src="https://img.shields.io/github/license/andros21/ytdl-mpv?color=blue&label=License&style=flat-square" alt="License">
   </a>
 
-  <h4 align="center">Rofi script to browse and play YouTube contents <br>using <a href="https://github.com/ytdl-org/youtube-dl/">youtube-dl</a> and <a href="https://github.com/mpv-player/mpv">mpv</a></h4>
-  <p align="center">
+  <div align="center">
     <a href="#star-features">Features</a>
     ·
     <a href="#rocket-setup">Usage</a>
     ·
     <a href="#runner-run">Run</a>
-  </p>
-</p>
+  </div>
+</div>
 
 ## :star: Features
 
