@@ -227,8 +227,8 @@ _cacheQuery() {
    query="$1"
    # create main table and cache items
    sqlite3 "${DB}" "create table if not exists main (query str, id str, title str)"
-   sed "s/;//g" "$CACHEDIR/$query" | sed -E "N;s/(.*)\n(.*)/${query};\2;\1/" \
-      | sqlite3 -separator ';' "${DB}" ".import /dev/stdin main" 2> /dev/null
+   sed "s/;//g" "$CACHEDIR/$query" | sed "s/\"/\'/g" | sed -E "N;s/(.*)\n(.*)/${query};\2;\1/" \
+      | sqlite3 -separator ';' "${DB}" ".import /dev/stdin main"
 }
 
 # Delete a cached query inside main table
