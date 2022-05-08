@@ -1,10 +1,9 @@
 <!-- PROJECT LOGO -->
 <br>
 <div align="center">
-  <a href="https://github.com/andros21/ytdl-mpv">
-    <img src="https://user-images.githubusercontent.com/58751603/150547344-fd1cc00b-a743-4657-b742-9a6b6f5e8df0.png" alt="Logo" width="470px">
-  </a>
-  <h4 align="center">Rofi script to browse and play YouTube contents <br>using <a href="https://github.com/ytdl-org/youtube-dl/">youtube-dl</a> and <a href="https://github.com/mpv-player/mpv">mpv</a></h4>
+    <img src="https://user-images.githubusercontent.com/58751603/167302289-d70b18ab-c91c-499b-bbbd-57f884d58089.png#gh-dark-mode-only" alt="dark-logo" width="470px">
+    <img src="https://user-images.githubusercontent.com/58751603/127172656-40c7adf1-b6de-4985-a1c0-14a2e58dc6f3.png#gh-light-mode-only" alt="light-logo" width="470px">
+<br>
   <a href="https://github.com/andros21/ytdl-mpv/blob/master/.github/workflows/lint.yml">
     <img src="https://img.shields.io/github/workflow/status/andros21/ytdl-mpv/Lint%20CI/master?label=Lint%20CI&logo=github&style=flat-square" alt="Lint CI">
   </a>
@@ -14,7 +13,7 @@
   <a href="https://github.com/andros21/ytdl-mpv/blob/master/LICENSE">
     <img src="https://img.shields.io/github/license/andros21/ytdl-mpv?color=blue&label=License&style=flat-square" alt="License">
   </a>
-
+  <h4 align="center">Rofi script to browse and play YouTube contents <br>using <a href="https://github.com/ytdl-org/youtube-dl/">youtube-dl</a> and <a href="https://github.com/mpv-player/mpv">mpv</a></h4>
   <div align="center">
     <a href="#star-features">Features</a>
     ·
