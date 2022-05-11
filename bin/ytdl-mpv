@@ -226,7 +226,7 @@ _cacheQuery() {
    local query
    query="$1"
    # create main table and cache items
-   sqlite3 "${DB}" "create table if not exists main (query str, id str, title str)"
+   sqlite3 "${DB}" "create table if not exists main (query str, id str, title str, unique(title))"
    sed "s/;//g" "$CACHEDIR/$query" | sed "s/\"/\'/g" | sed -E "N;s/(.*)\n(.*)/${query};\2;\1/" \
       | sqlite3 -separator ';' "${DB}" ".import /dev/stdin main"
 }
