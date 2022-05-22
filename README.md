@@ -1,8 +1,12 @@
 <!-- PROJECT LOGO -->
 <br>
 <div align="center">
-    <img src="https://user-images.githubusercontent.com/58751603/167302289-d70b18ab-c91c-499b-bbbd-57f884d58089.png#gh-dark-mode-only" alt="dark-logo" width="470px">
-    <img src="https://user-images.githubusercontent.com/58751603/127172656-40c7adf1-b6de-4985-a1c0-14a2e58dc6f3.png#gh-light-mode-only" alt="light-logo" width="470px">
+  <a href="https://github.com/andros21/ytdl-mpv">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/58751603/167302289-d70b18ab-c91c-499b-bbbd-57f884d58089.png">
+      <img src="https://user-images.githubusercontent.com/58751603/127172656-40c7adf1-b6de-4985-a1c0-14a2e58dc6f3.png" alt="Logo" width="470">
+    </picture>
+  </a>
 <br>
   <a href="https://github.com/andros21/ytdl-mpv/blob/master/.github/workflows/lint.yml">
     <img src="https://img.shields.io/github/workflow/status/andros21/ytdl-mpv/Lint%20CI/master?label=Lint%20CI&logo=github&style=flat-square" alt="Lint CI">
