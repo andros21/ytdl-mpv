@@ -52,13 +52,14 @@ _flushHist() {
    rm -fr "$HISTORY" && _info "ytdl-mpv search history flushed"
 }
 _helpPlay() {
-   local STYLE="window {width: 30%;} listview {lines: 5;}"
+   local STYLE="window {width: 32%;} listview {lines: 5;}"
    cat << EOF | \
    _rofi -theme-str "$STYLE" -mesg "--  play menu key bindings  --" > /dev/null
-[Enter] | Default action
-[${play_audio}] | Start audio playback
-[${play_video}] | Start video playback
-[${copy_id}] | Copy video id
+[Enter]   | Default action
+[${play_audio}]   | Start audio playback
+[${play_video}]   | Start video playback
+[${copy_id}]   | Copy video id
+[${multi_select}] | Multi selection
 EOF
 }
 _helpSearch() {
@@ -70,11 +71,12 @@ _helpSearch() {
 EOF
 }
 _helpEdit() {
-   local STYLE="window {width: 30%;} listview {lines: 5;}"
+   local STYLE="window {width: 32%;} listview {lines: 5;}"
    cat << EOF | \
    _rofi -theme-str "$STYLE" -mesg "--  edit menu key bindings  --" > /dev/null
-[Enter] | Play playlist item
-[${remove_track}] | Remove playlist item
+[Enter]   | Play playlist item
+[${remove_track}]   | Remove playlist item
+[${multi_select}] | Multi selection
 EOF
 }
 
@@ -86,6 +88,7 @@ play_video="Alt+v"
 re_cache="Alt+r"
 remove_track="Alt+r"
 key_help="Alt+h"
+multi_select="Alt+Tab"
 
 # Default envs
 CACHEDIR=$HOME/.cache/ytdl-mpv
@@ -273,7 +276,9 @@ _editMenu() {
       local STYLE="window {width: ${WIDTH}%;} listview {lines: ${LINEN};}"
       args=( -kb-custom-1 "${remove_track}"
              -kb-custom-4 "${key_help}"
+             -kb-accept-alt "${multi_select}"
              -theme-str "$STYLE"
+             -multi-select
              -no-custom
              -mesg "-- loop [$(_ytdl_mpvctl loop-status)] -- edit menu: edit playlist, help [Alt+h] --" )
       # get current playlist
@@ -281,26 +286,34 @@ _editMenu() {
       pl="$(_ytdl_mpvctl playlist "${DB}")"
       # selected track
       local rofi_exit
-      str="$(printf '< Return\n%s' "${pl}" | _rofi "${args[@]}")"
+      strs="$(printf '< Return\n%s' "${pl}" | _rofi "${args[@]}")"
       rofi_exit="$?"
       # check if help requested
       if [[ "${rofi_exit}" -eq 13 ]]; then
          _helpEdit; _editMenu;
       else
-         if [ -z "$str" ]; then
+         if [ -z "$strs" ]; then
             _info "Nothing selected"
             exit 0
-         elif [ "${str::1}" == "<" ]; then
+         elif [ "${strs::1}" == "<" ]; then
             _info "Back to main menu"
-            _mainMenu;
+            _mainMenu; break
          else
-            local stn
-            # get track number
-            stn="$(printf '%s' "${str::2}" | sed 's/^0*//')"
-            case "${rofi_exit}" in
-               0)  _ytdl_mpvctl track "$((stn-1))";;
-               10) _ytdl_mpvctl rm "$((stn-1))";;
-            esac
+            local i
+            local IFS
+            i=1
+            IFS=$'\n'
+            for str in $strs; do
+               local stn
+               # get track number
+               stn="$(printf '%s' "${str::2}" | sed 's/^0*//')"
+               case "${rofi_exit}" in
+                  0)  _ytdl_mpvctl track "$((stn-i))"; break;;
+                  10) _ytdl_mpvctl rm "$((stn-i))";;
+               esac
+               i=$(($i+1))
+            done
+            # recursive until explicit exit
             sleep $DELAY; _editMenu
          fi
       fi
@@ -436,46 +449,55 @@ _startPlay() {
              -kb-custom-2 "${play_video}"
              -kb-custom-3 "${copy_id}"
              -kb-custom-4 "${key_help}"
+             -kb-accept-alt "${multi_select}"
              -theme-str "$STYLE"
+             -multi-select
              -no-custom
              -mesg "-- play menu: start audio or video playback, help [Alt+h] --" )
    else
-      args=( -theme-str "$STYLE"
+      args=( -kb-accept-alt "${multi_select}"
+             -theme-str "$STYLE"
+             -multi-select
              -no-custom
              -mesg "-- play menu: add track to current playlist, simply [Enter] --" )
    fi
    # selected track
    local strack
    local rofi_exit
-   strack="$(_getCachedQuery "$query" | _rofi "${args[@]}")"
+   stracks="$(_getCachedQuery "$query" | _rofi "${args[@]}")"
    rofi_exit="$?"
    # check if help requested
    if [[ "${rofi_exit}" -eq 13 ]]; then
       _helpPlay; _startPlay;
    else
-      if [ -z "$strack" ]; then
+      if [ -z "$stracks" ]; then
          _info "Nothing selected"
          exit 0
-      elif [ "${strack::1}" == "<" ]; then
+      elif [ "${stracks::1}" == "<" ]; then
          _info "Back to search menu"
-         _searchMenu;
+         _searchMenu; break;
       else
-         strack="${strack:4}"
-         local id
-         id="ytdl://$(_getCachedIdQuery "$query" "$strack")"
-         # check if ytdl socket is idle, if yes append instead play
-         if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
-            case "${rofi_exit}" in
-               0) "${default_do}" "$id";;
-               10)     _playAudio "$id";;
-               11)     _playVideo "$id";;
-               12)        _copyId "$id";;
-            esac
-         else
-            _appendTrack "$id";
-         fi
+         local IFS
+         IFS=$'\n'
+         for strack in $stracks; do
+            strack="${strack:4}"
+            local id
+            id="ytdl://$(_getCachedIdQuery "$query" "$strack")"
+            # check if ytdl socket is idle, if yes append instead play
+            if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
+               case "${rofi_exit}" in
+                  0) "${default_do}" "$id";;
+                  10)     _playAudio "$id";;
+                  11)     _playVideo "$id";;
+                  12)        _copyId "$id"; break;;
+               esac
+               sleep $DELAY;
+            else
+               _appendTrack "$id";
+            fi
+         done
          # recursive until explicit exit
-         sleep $DELAY; _startPlay
+         _searchMenu
       fi
    fi
 }
