@@ -297,7 +297,7 @@ _editMenu() {
             exit 0
          elif [ "${strs::1}" == "<" ]; then
             _info "Back to main menu"
-            _mainMenu; break
+            _mainMenu; return;
          else
             local i
             local IFS
@@ -308,10 +308,10 @@ _editMenu() {
                # get track number
                stn="$(printf '%s' "${str::2}" | sed 's/^0*//')"
                case "${rofi_exit}" in
-                  0)  _ytdl_mpvctl track "$((stn-i))"; break;;
+                  0)  _ytdl_mpvctl track "$((stn-i))"; return;;
                   10) _ytdl_mpvctl rm "$((stn-i))";;
                esac
-               i=$(($i+1))
+               i=$((i+1))
             done
             # recursive until explicit exit
             sleep $DELAY; _editMenu
@@ -475,7 +475,7 @@ _startPlay() {
          exit 0
       elif [ "${stracks::1}" == "<" ]; then
          _info "Back to search menu"
-         _searchMenu; break;
+         _searchMenu; return;
       else
          local IFS
          IFS=$'\n'
@@ -489,7 +489,7 @@ _startPlay() {
                   0) "${default_do}" "$id";;
                   10)     _playAudio "$id";;
                   11)     _playVideo "$id";;
-                  12)        _copyId "$id"; break;;
+                  12)        _copyId "$id"; return;;
                esac
                sleep $DELAY;
             else
