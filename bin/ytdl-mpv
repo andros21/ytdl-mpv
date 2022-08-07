@@ -491,7 +491,7 @@ _startPlay() {
                   11)     _playVideo "$id";;
                   12)        _copyId "$id"; return;;
                esac
-               sleep $DELAY;
+               sleep 1;
             else
                _appendTrack "$id";
             fi
