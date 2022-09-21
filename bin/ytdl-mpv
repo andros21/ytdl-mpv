@@ -52,13 +52,15 @@ _flushHist() {
    rm -fr "$HISTORY" && _info "ytdl-mpv search history flushed"
 }
 _helpPlay() {
-   local STYLE="window {width: 30%;} listview {lines: 5;}"
+   local STYLE="window {width: 32%;} listview {lines: 6;}"
    cat << EOF | \
    _rofi -theme-str "$STYLE" -mesg "--  play menu key bindings  --" > /dev/null
 [Enter] | Default action
 [${play_audio}] | Start audio playback
 [${play_video}] | Start video playback
 [${copy_id}] | Copy video id
+[$(printf '%s' "${multi_select}" | sed 's/Tab/⇄/')] | Multi selection
+[$(printf '%s' "${key_return}" | sed 's/Left/←/')] | Return
 EOF
 }
 _helpSearch() {
@@ -67,14 +69,17 @@ _helpSearch() {
    _rofi -theme-str "$STYLE" -mesg "-- search menu key bindings --" > /dev/null
 [Enter] | Search item
 [${re_cache}] | Recache item
+[$(printf '%s' "${key_return}" | sed 's/Left/←/')] | Return
 EOF
 }
 _helpEdit() {
-   local STYLE="window {width: 30%;} listview {lines: 5;}"
+   local STYLE="window {width: 32%;} listview {lines: 5;}"
    cat << EOF | \
    _rofi -theme-str "$STYLE" -mesg "--  edit menu key bindings  --" > /dev/null
 [Enter] | Play playlist item
 [${remove_track}] | Remove playlist item
+[$(printf '%s' "${multi_select}" | sed 's/Tab/⇄/')] | Multi selection
+[$(printf '%s' "${key_return}" | sed 's/Left/←/')] | Return
 EOF
 }
 
@@ -86,6 +91,8 @@ play_video="Alt+v"
 re_cache="Alt+r"
 remove_track="Alt+r"
 key_help="Alt+h"
+multi_select="Alt+Tab"
+key_return="Alt+Left"
 
 # Default envs
 CACHEDIR=$HOME/.cache/ytdl-mpv
@@ -178,10 +185,10 @@ _hashStr() {
 # Format and numbering plain file
 _getView() {
    if [ -f "$1" ]; then
-      printf '< Return\n%s' "$(awk '{ print FNR ") " $0 }' < "$1" | sed 's/\<[0-9]\>/0&/')"
+      awk '{ print FNR ") " $0 }' < "$1" | sed 's/\<[0-9]\>/0&/'
    elif [ -d "$1" ]; then
-      printf '< Return\n%s' "$(find "$1" -type f -name '*' -exec basename -a -- {} + \
-         | sort | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/')"
+      find "$1" -type f -name '*' -exec basename -a -- {} + \
+         | sort | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/'
    else
       return
    fi
@@ -204,9 +211,9 @@ _isCachedQuery() {
 _getCachedQuery() {
    local query
    query="$1"
-   printf '< Return\n%s' "$(sqlite3 "${DB}" \
+   sqlite3 "${DB}" \
       "select title from main where query='${query}'" 2> /dev/null \
-      | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/')"
+      | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/'
 }
 
 # Get id of yt content from cached table
@@ -273,7 +280,10 @@ _editMenu() {
       local STYLE="window {width: ${WIDTH}%;} listview {lines: ${LINEN};}"
       args=( -kb-custom-1 "${remove_track}"
              -kb-custom-4 "${key_help}"
+             -kb-custom-5 "${key_return}"
+             -kb-accept-alt "${multi_select}"
              -theme-str "$STYLE"
+             -multi-select
              -no-custom
              -mesg "-- loop [$(_ytdl_mpvctl loop-status)] -- edit menu: edit playlist, help [Alt+h] --" )
       # get current playlist
@@ -281,26 +291,34 @@ _editMenu() {
       pl="$(_ytdl_mpvctl playlist "${DB}")"
       # selected track
       local rofi_exit
-      str="$(printf '< Return\n%s' "${pl}" | _rofi "${args[@]}")"
+      strs="$(printf '%s' "${pl}" | _rofi "${args[@]}")"
       rofi_exit="$?"
       # check if help requested
       if [[ "${rofi_exit}" -eq 13 ]]; then
          _helpEdit; _editMenu;
       else
-         if [ -z "$str" ]; then
+         if [ -z "$strs" ]; then
             _info "Nothing selected"
             exit 0
-         elif [ "${str::1}" == "<" ]; then
+         elif [[ "${rofi_exit}" -eq 14 ]]; then
             _info "Back to main menu"
-            _mainMenu;
+            _mainMenu; return;
          else
-            local stn
-            # get track number
-            stn="$(printf '%s' "${str::2}" | sed 's/^0*//')"
-            case "${rofi_exit}" in
-               0)  _ytdl_mpvctl track "$((stn-1))";;
-               10) _ytdl_mpvctl rm "$((stn-1))";;
-            esac
+            local i
+            local IFS
+            i=1
+            IFS=$'\n'
+            for str in $strs; do
+               local stn
+               # get track number
+               stn="$(printf '%s' "${str::2}" | sed 's/^0*//')"
+               case "${rofi_exit}" in
+                  0)  _ytdl_mpvctl track "$((stn-i))"; return;;
+                  10) _ytdl_mpvctl rm "$((stn-i))";;
+               esac
+               i=$((i+1))
+            done
+            # recursive until explicit exit
             sleep $DELAY; _editMenu
          fi
       fi
@@ -312,14 +330,17 @@ _saveMenu() {
    mkdir -p "$PLAYDIR"
    # saved playlists
    local saved
+   local rofi_exit
    local STYLE="window {width: 50%;} listview {lines: 13;}"
    saved="$(_getView "${PLAYDIR}" \
-      | _rofi -theme-str "$STYLE" -mesg "-- save menu: save current playlist as --" \
-      | xargs | tr '[:upper:]' '[:lower:]')"
+      | _rofi -theme-str "$STYLE" -kb-custom-5 "${key_return}" \
+      -mesg "-- save menu: save current playlist as --")"
+   rofi_exit="$?"
+   saved="$(printf '%s' "${saved}" | xargs | tr '[:upper:]' '[:lower:]')"
    if [ -z "$saved" ]; then
       _info "Nothing selected or searched"
       exit 0
-   elif [ "${saved::1}" == "<" ]; then
+   elif [[ "${rofi_exit}" -eq 14 ]]; then
       _info "Back to main menu"
       _mainMenu;
    else
@@ -334,14 +355,17 @@ _saveMenu() {
 _loadMenu() {
    # saved playlists
    local saved
+   local rofi_exit
    local STYLE="window {width: 50%;} listview {lines: 13;}"
    saved="$(_getView "${PLAYDIR}" \
-      | _rofi -theme-str "$STYLE" -no-custom -mesg "-- load menu: load playlist for audio playback --" \
-      | xargs | tr '[:upper:]' '[:lower:]')"
+      | _rofi -theme-str "$STYLE" -no-custom -kb-custom-5 "${key_return}" \
+      -mesg "-- load menu: load playlist for audio playback --")"
+   rofi_exit="$?"
+   saved="$(printf '%s' "${saved}" | xargs | tr '[:upper:]' '[:lower:]')"
    if [ -z "$saved" ]; then
       _info "Nothing selected or searched"
       exit 0
-   elif [ "${saved::1}" == "<" ]; then
+   elif [[ "${rofi_exit}" -eq 14 ]]; then
       _info "Back to main menu"
       _mainMenu;
    else
@@ -374,6 +398,7 @@ _searchMenu() {
    local STYLE="window {width: 50%;} listview {lines: 13;}"
    args=( -kb-custom-1 "${re_cache}"
           -kb-custom-4 "${key_help}"
+          -kb-custom-5 "${key_return}"
           -theme-str "$STYLE"
           -mesg "-- search menu: search something, help [Alt+h] --" )
    # select from history or type something
@@ -390,7 +415,7 @@ _searchMenu() {
       if [ -z "$search" ]; then
          _info "Nothing selected or searched"
          exit 0
-      elif [ "${search::1}" == "<" ]; then
+      elif [[ "${rofi_exit}" -eq 14 ]]; then
          _info "Back to main menu"
          _mainMenu;
       else
@@ -436,46 +461,57 @@ _startPlay() {
              -kb-custom-2 "${play_video}"
              -kb-custom-3 "${copy_id}"
              -kb-custom-4 "${key_help}"
+             -kb-custom-5 "${key_return}"
+             -kb-accept-alt "${multi_select}"
              -theme-str "$STYLE"
+             -multi-select
              -no-custom
              -mesg "-- play menu: start audio or video playback, help [Alt+h] --" )
    else
-      args=( -theme-str "$STYLE"
+      args=( -kb-custom-5 "${key_return}"
+             -kb-accept-alt "${multi_select}"
+             -theme-str "$STYLE"
+             -multi-select
              -no-custom
              -mesg "-- play menu: add track to current playlist, simply [Enter] --" )
    fi
    # selected track
    local strack
    local rofi_exit
-   strack="$(_getCachedQuery "$query" | _rofi "${args[@]}")"
+   stracks="$(_getCachedQuery "$query" | _rofi "${args[@]}")"
    rofi_exit="$?"
    # check if help requested
    if [[ "${rofi_exit}" -eq 13 ]]; then
       _helpPlay; _startPlay;
    else
-      if [ -z "$strack" ]; then
+      if [ -z "$stracks" ]; then
          _info "Nothing selected"
          exit 0
-      elif [ "${strack::1}" == "<" ]; then
+      elif [[ "${rofi_exit}" -eq 14 ]]; then
          _info "Back to search menu"
-         _searchMenu;
+         _searchMenu; return;
       else
-         strack="${strack:4}"
-         local id
-         id="ytdl://$(_getCachedIdQuery "$query" "$strack")"
-         # check if ytdl socket is idle, if yes append instead play
-         if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
-            case "${rofi_exit}" in
-               0) "${default_do}" "$id";;
-               10)     _playAudio "$id";;
-               11)     _playVideo "$id";;
-               12)        _copyId "$id";;
-            esac
-         else
-            _appendTrack "$id";
-         fi
+         local IFS
+         IFS=$'\n'
+         for strack in $stracks; do
+            strack="${strack:4}"
+            local id
+            id="ytdl://$(_getCachedIdQuery "$query" "$strack")"
+            # check if ytdl socket is idle, if yes append instead play
+            if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
+               case "${rofi_exit}" in
+                  0) "${default_do}" "$id";;
+                  10)     _playAudio "$id";;
+                  11)     _playVideo "$id";;
+                  12)        _copyId "$id"; return;;
+               esac
+               sleep 1;
+            else
+               _appendTrack "$id";
+            fi
+         done
          # recursive until explicit exit
-         sleep $DELAY; _startPlay
+         _searchMenu
       fi
    fi
 }
