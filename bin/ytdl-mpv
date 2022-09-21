@@ -52,14 +52,15 @@ _flushHist() {
    rm -fr "$HISTORY" && _info "ytdl-mpv search history flushed"
 }
 _helpPlay() {
-   local STYLE="window {width: 32%;} listview {lines: 5;}"
+   local STYLE="window {width: 32%;} listview {lines: 6;}"
    cat << EOF | \
    _rofi -theme-str "$STYLE" -mesg "--  play menu key bindings  --" > /dev/null
-[Enter]   | Default action
-[${play_audio}]   | Start audio playback
-[${play_video}]   | Start video playback
-[${copy_id}]   | Copy video id
-[${multi_select}] | Multi selection
+[Enter] | Default action
+[${play_audio}] | Start audio playback
+[${play_video}] | Start video playback
+[${copy_id}] | Copy video id
+[$(printf '%s' "${multi_select}" | sed 's/Tab/⇄/')] | Multi selection
+[$(printf '%s' "${key_return}" | sed 's/Left/←/')] | Return
 EOF
 }
 _helpSearch() {
@@ -68,15 +69,17 @@ _helpSearch() {
    _rofi -theme-str "$STYLE" -mesg "-- search menu key bindings --" > /dev/null
 [Enter] | Search item
 [${re_cache}] | Recache item
+[$(printf '%s' "${key_return}" | sed 's/Left/←/')] | Return
 EOF
 }
 _helpEdit() {
    local STYLE="window {width: 32%;} listview {lines: 5;}"
    cat << EOF | \
    _rofi -theme-str "$STYLE" -mesg "--  edit menu key bindings  --" > /dev/null
-[Enter]   | Play playlist item
-[${remove_track}]   | Remove playlist item
-[${multi_select}] | Multi selection
+[Enter] | Play playlist item
+[${remove_track}] | Remove playlist item
+[$(printf '%s' "${multi_select}" | sed 's/Tab/⇄/')] | Multi selection
+[$(printf '%s' "${key_return}" | sed 's/Left/←/')] | Return
 EOF
 }
 
@@ -89,6 +92,7 @@ re_cache="Alt+r"
 remove_track="Alt+r"
 key_help="Alt+h"
 multi_select="Alt+Tab"
+key_return="Alt+Left"
 
 # Default envs
 CACHEDIR=$HOME/.cache/ytdl-mpv
@@ -181,10 +185,10 @@ _hashStr() {
 # Format and numbering plain file
 _getView() {
    if [ -f "$1" ]; then
-      printf '< Return\n%s' "$(awk '{ print FNR ") " $0 }' < "$1" | sed 's/\<[0-9]\>/0&/')"
+      awk '{ print FNR ") " $0 }' < "$1" | sed 's/\<[0-9]\>/0&/'
    elif [ -d "$1" ]; then
-      printf '< Return\n%s' "$(find "$1" -type f -name '*' -exec basename -a -- {} + \
-         | sort | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/')"
+      find "$1" -type f -name '*' -exec basename -a -- {} + \
+         | sort | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/'
    else
       return
    fi
@@ -207,9 +211,9 @@ _isCachedQuery() {
 _getCachedQuery() {
    local query
    query="$1"
-   printf '< Return\n%s' "$(sqlite3 "${DB}" \
+   sqlite3 "${DB}" \
       "select title from main where query='${query}'" 2> /dev/null \
-      | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/')"
+      | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/'
 }
 
 # Get id of yt content from cached table
@@ -276,6 +280,7 @@ _editMenu() {
       local STYLE="window {width: ${WIDTH}%;} listview {lines: ${LINEN};}"
       args=( -kb-custom-1 "${remove_track}"
              -kb-custom-4 "${key_help}"
+             -kb-custom-5 "${key_return}"
              -kb-accept-alt "${multi_select}"
              -theme-str "$STYLE"
              -multi-select
@@ -286,7 +291,7 @@ _editMenu() {
       pl="$(_ytdl_mpvctl playlist "${DB}")"
       # selected track
       local rofi_exit
-      strs="$(printf '< Return\n%s' "${pl}" | _rofi "${args[@]}")"
+      strs="$(printf '%s' "${pl}" | _rofi "${args[@]}")"
       rofi_exit="$?"
       # check if help requested
       if [[ "${rofi_exit}" -eq 13 ]]; then
@@ -295,7 +300,7 @@ _editMenu() {
          if [ -z "$strs" ]; then
             _info "Nothing selected"
             exit 0
-         elif [ "${strs::1}" == "<" ]; then
+         elif [[ "${rofi_exit}" -eq 14 ]]; then
             _info "Back to main menu"
             _mainMenu; return;
          else
@@ -325,14 +330,17 @@ _saveMenu() {
    mkdir -p "$PLAYDIR"
    # saved playlists
    local saved
+   local rofi_exit
    local STYLE="window {width: 50%;} listview {lines: 13;}"
    saved="$(_getView "${PLAYDIR}" \
-      | _rofi -theme-str "$STYLE" -mesg "-- save menu: save current playlist as --" \
-      | xargs | tr '[:upper:]' '[:lower:]')"
+      | _rofi -theme-str "$STYLE" -kb-custom-5 "${key_return}" \
+      -mesg "-- save menu: save current playlist as --")"
+   rofi_exit="$?"
+   saved="$(printf '%s' "${saved}" | xargs | tr '[:upper:]' '[:lower:]')"
    if [ -z "$saved" ]; then
       _info "Nothing selected or searched"
       exit 0
-   elif [ "${saved::1}" == "<" ]; then
+   elif [[ "${rofi_exit}" -eq 14 ]]; then
       _info "Back to main menu"
       _mainMenu;
    else
@@ -347,14 +355,17 @@ _saveMenu() {
 _loadMenu() {
    # saved playlists
    local saved
+   local rofi_exit
    local STYLE="window {width: 50%;} listview {lines: 13;}"
    saved="$(_getView "${PLAYDIR}" \
-      | _rofi -theme-str "$STYLE" -no-custom -mesg "-- load menu: load playlist for audio playback --" \
-      | xargs | tr '[:upper:]' '[:lower:]')"
+      | _rofi -theme-str "$STYLE" -no-custom -kb-custom-5 "${key_return}" \
+      -mesg "-- load menu: load playlist for audio playback --")"
+   rofi_exit="$?"
+   saved="$(printf '%s' "${saved}" | xargs | tr '[:upper:]' '[:lower:]')"
    if [ -z "$saved" ]; then
       _info "Nothing selected or searched"
       exit 0
-   elif [ "${saved::1}" == "<" ]; then
+   elif [[ "${rofi_exit}" -eq 14 ]]; then
       _info "Back to main menu"
       _mainMenu;
    else
@@ -387,6 +398,7 @@ _searchMenu() {
    local STYLE="window {width: 50%;} listview {lines: 13;}"
    args=( -kb-custom-1 "${re_cache}"
           -kb-custom-4 "${key_help}"
+          -kb-custom-5 "${key_return}"
           -theme-str "$STYLE"
           -mesg "-- search menu: search something, help [Alt+h] --" )
    # select from history or type something
@@ -403,7 +415,7 @@ _searchMenu() {
       if [ -z "$search" ]; then
          _info "Nothing selected or searched"
          exit 0
-      elif [ "${search::1}" == "<" ]; then
+      elif [[ "${rofi_exit}" -eq 14 ]]; then
          _info "Back to main menu"
          _mainMenu;
       else
@@ -449,13 +461,15 @@ _startPlay() {
              -kb-custom-2 "${play_video}"
              -kb-custom-3 "${copy_id}"
              -kb-custom-4 "${key_help}"
+             -kb-custom-5 "${key_return}"
              -kb-accept-alt "${multi_select}"
              -theme-str "$STYLE"
              -multi-select
              -no-custom
              -mesg "-- play menu: start audio or video playback, help [Alt+h] --" )
    else
-      args=( -kb-accept-alt "${multi_select}"
+      args=( -kb-custom-5 "${key_return}"
+             -kb-accept-alt "${multi_select}"
              -theme-str "$STYLE"
              -multi-select
              -no-custom
@@ -473,7 +487,7 @@ _startPlay() {
       if [ -z "$stracks" ]; then
          _info "Nothing selected"
          exit 0
-      elif [ "${stracks::1}" == "<" ]; then
+      elif [[ "${rofi_exit}" -eq 14 ]]; then
          _info "Back to search menu"
          _searchMenu; return;
       else
