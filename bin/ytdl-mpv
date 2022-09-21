@@ -243,7 +243,7 @@ _mainMenu() {
    local action
    local STYLE="window {width: 50%;} listview {lines: 13;}"
    action="$(_getMainMenu \
-      | _rofi -theme-str "$STYLE" -mesg "-- main menu: select an action --" \
+      | _rofi -theme-str "$STYLE" -no-custom -mesg "-- main menu: select an action --" \
       | awk '{$1=tolower($1);print $1}')"
    action="${action::2}"
    case "$action" in
@@ -274,6 +274,7 @@ _editMenu() {
       args=( -kb-custom-1 "${remove_track}"
              -kb-custom-4 "${key_help}"
              -theme-str "$STYLE"
+             -no-custom
              -mesg "-- loop [$(_ytdl_mpvctl loop-status)] -- edit menu: edit playlist, help [Alt+h] --" )
       # get current playlist
       local pl
@@ -293,17 +294,13 @@ _editMenu() {
             _info "Back to main menu"
             _mainMenu;
          else
-            # if match in playlist
-            (printf '%s' "$pl" | grep "$str" &> /dev/null) && {
-               local stn
-               # get track number
-               stn="$(printf '%s' "${str::2}" | sed 's/^0*//')"
-               case "${rofi_exit}" in
-                  0)  _ytdl_mpvctl track "$((stn-1))";;
-                  10) _ytdl_mpvctl rm "$((stn-1))";;
-               esac
-            }
-            # recursive until explicit exit
+            local stn
+            # get track number
+            stn="$(printf '%s' "${str::2}" | sed 's/^0*//')"
+            case "${rofi_exit}" in
+               0)  _ytdl_mpvctl track "$((stn-1))";;
+               10) _ytdl_mpvctl rm "$((stn-1))";;
+            esac
             sleep $DELAY; _editMenu
          fi
       fi
@@ -339,7 +336,7 @@ _loadMenu() {
    local saved
    local STYLE="window {width: 50%;} listview {lines: 13;}"
    saved="$(_getView "${PLAYDIR}" \
-      | _rofi -theme-str "$STYLE" -mesg "-- load menu: load playlist for audio playback --" \
+      | _rofi -theme-str "$STYLE" -no-custom -mesg "-- load menu: load playlist for audio playback --" \
       | xargs | tr '[:upper:]' '[:lower:]')"
    if [ -z "$saved" ]; then
       _info "Nothing selected or searched"
@@ -440,9 +437,11 @@ _startPlay() {
              -kb-custom-3 "${copy_id}"
              -kb-custom-4 "${key_help}"
              -theme-str "$STYLE"
+             -no-custom
              -mesg "-- play menu: start audio or video playback, help [Alt+h] --" )
    else
       args=( -theme-str "$STYLE"
+             -no-custom
              -mesg "-- play menu: add track to current playlist, simply [Enter] --" )
    fi
    # selected track
@@ -463,22 +462,18 @@ _startPlay() {
       else
          strack="${strack:4}"
          local id
-         id="$(_getCachedIdQuery "$query" "$strack")"
-         # if not empty
-         [[ -n "$id" ]] && {
-            id="ytdl://$id"
-            # check if ytdl socket is idle, if yes append instead play
-            if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
-               case "${rofi_exit}" in
-                  0) "${default_do}" "$id";;
-                  10)     _playAudio "$id";;
-                  11)     _playVideo "$id";;
-                  12)        _copyId "$id";;
-               esac
-            else
-               _appendTrack "$id";
-            fi
-         }
+         id="ytdl://$(_getCachedIdQuery "$query" "$strack")"
+         # check if ytdl socket is idle, if yes append instead play
+         if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
+            case "${rofi_exit}" in
+               0) "${default_do}" "$id";;
+               10)     _playAudio "$id";;
+               11)     _playVideo "$id";;
+               12)        _copyId "$id";;
+            esac
+         else
+            _appendTrack "$id";
+         fi
          # recursive until explicit exit
          sleep $DELAY; _startPlay
       fi
