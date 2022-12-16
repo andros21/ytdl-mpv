@@ -8,8 +8,8 @@
     </picture>
   </a>
 <br>
-  <a href="https://github.com/andros21/ytdl-mpv/blob/master/.github/workflows/lint.yml">
-    <img src="https://img.shields.io/github/workflow/status/andros21/ytdl-mpv/Lint%20CI/master?label=Lint%20CI&logo=github&style=flat-square" alt="Lint CI">
+  <a href="https://github.com/andros21/ytdl-mpv/actions/workflows/lint.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/andros21/ytdl-mpv/lint.yml?branch=master&label=Lint%20CI&logo=github&style=flat-square" alt="Lint CI">
   </a>
    <a href="https://github.com/davatorium/rofi">
     <img src="https://img.shields.io/badge/rofi-interface-important?logo=youtube&style=flat-square" alt="rofi">
