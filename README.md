@@ -17,7 +17,7 @@
   <a href="https://github.com/andros21/ytdl-mpv/blob/master/LICENSE">
     <img src="https://img.shields.io/github/license/andros21/ytdl-mpv?color=blue&label=License&style=flat-square" alt="License">
   </a>
-  <h4 align="center">Rofi script to browse and play YouTube contents <br>using <a href="https://github.com/ytdl-org/youtube-dl/">youtube-dl</a> and <a href="https://github.com/mpv-player/mpv">mpv</a></h4>
+  <h4 align="center">Rofi script to browse and play YouTube contents <br>using <a href="https://github.com/yt-dlp/yt-dlp/">yt-dlp</a> and <a href="https://github.com/mpv-player/mpv">mpv</a></h4>
   <div align="center">
     <a href="#star-features">Features</a>
     ·
@@ -49,7 +49,7 @@
 * `nc` `sqlite3` `xargs`
 * [`mpv`](https://github.com/mpv-player/mpv)
 * [`rofi>=1.6.1`](https://github.com/davatorium/rofi)
-* [`youtube-dl==latest`](https://github.com/ytdl-org/youtube-dl)
+* [`yt-dlp==latest`](https://github.com/yt-dlp/yt-dlp)
 
 **Opt dependencies**
 
