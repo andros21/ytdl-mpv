@@ -25,7 +25,7 @@ _die() {
 # Ensure dependencies
 _checkDep() {
    type mpv > /dev/null 2>&1 || _die "Cannot find mpv in your \$PATH"
-   type youtube-dl > /dev/null 2>&1 || _die "Cannot find youtube-dl in your \$PATH"
+   type yt-dlp > /dev/null 2>&1 || _die "Cannot find yt-dlp in your \$PATH"
    type nc > /dev/null 2>&1 && SOCKCMD="nc -U -N $SOCKET"
    type socat > /dev/null 2>&1 && SOCKCMD="socat - $SOCKET"
    [ "$SOCKCMD" ] || _die "Cannot find socat or nc in your \$PATH. Install before continue"
@@ -123,7 +123,7 @@ _getPlaylist() {
                "select distinct title from main where id='${trid}'" 2> /dev/null)"
             if [ -z "$trtitle" ]; then
                local trtitle
-               trtitle=$(youtube-dl --get-filename "$trid" -o "%(title)s" 2> /dev/null)
+               trtitle=$(yt-dlp --get-filename "$trid" -o "%(title)s" 2> /dev/null)
                # cache this single search as relative to a NULL query
                sqlite3 "${db}" \
                   "insert into main (query,id,title) values ('NULL','${trid}','${trtitle}')" \
@@ -132,10 +132,10 @@ _getPlaylist() {
          else
             # searching track title, using ytdl
             local trtitle
-            trtitle=$(youtube-dl --get-filename "$trid" -o "%(title)s" 2> /dev/null)
+            trtitle=$(yt-dlp --get-filename "$trid" -o "%(title)s" 2> /dev/null)
          fi
          if [ -z "$trtitle" ]; then
-            printf "[Warning] youtube-dl title search fail\n" >&2
+            printf "[Warning] yt-dlp title search fail\n" >&2
             local trtitle
             trtitle="NULL"
          fi

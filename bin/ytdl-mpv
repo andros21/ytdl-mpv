@@ -4,7 +4,7 @@
 # | YTDL-MPV                                   |
 # |                                            |
 # | Browse and play YouTube contents from rofi |
-# | using youtube-dl and mpv                   |
+# | using yt-dlp and mpv                   |
 # |                                            |
 # | Authors: Andrea Rossoni                    |
 # | License: GPLv3                             |
@@ -123,7 +123,7 @@ _info() {
 # Ensure dependencies
 _checkDep() {
    local deps
-   deps=(mpv mpvctl nc rofi sqlite3 youtube-dl xargs xclip)
+   deps=(mpv mpvctl nc rofi sqlite3 yt-dlp xargs xclip)
    for dep in "${deps[@]}"; do
       type "$dep" > /dev/null 2>&1 || {
          if [ "$dep" == "xclip" ]; then
@@ -435,7 +435,7 @@ _searchMenu() {
 
 # Start ytdl search using keywords, and then start/append to playback
 _startPlay() {
-   # youtube-dl search
+   # yt-dlp search
    local query
    query="$(_hashStr "${search}:${NUMBER}")"
    mkdir -p "$CACHEDIR"
@@ -445,11 +445,11 @@ _startPlay() {
    cache="$(_isCachedQuery "$query")"
    if [ -z "$cache" ] || [ "$to_recache" -eq 1 ]; then
       if [ "$to_recache" -eq 1 ]; then _deleteQuery "$query"; fi
-      youtube-dl --default-search \
+      yt-dlp --default-search \
          ytsearch"$NUMBER" "$search" --get-id --get-title \
          2> /dev/null > "$CACHEDIR/$query" &
-      wait "$!"; youtube_dl_exit="$?"
-      [[ "$youtube_dl_exit" -eq 0 ]] || _die "youtube-dl search fail, exit code ${youtube_dl_exit}"
+      wait "$!"; yt_dlp_exit="$?"
+      [[ "$yt_dlp_exit" -eq 0 ]] || _die "yt-dlp search fail, exit code ${yt_dlp_exit}"
       _cacheQuery "$query" 2> /dev/null
       rm -f "$CACHEDIR/$query"
    fi
