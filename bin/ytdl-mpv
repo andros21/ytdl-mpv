@@ -4,12 +4,14 @@
 # | YTDL-MPV                                   |
 # |                                            |
 # | Browse and play YouTube contents from rofi |
-# | using yt-dlp and mpv                   |
+# | using yt-dlp and mpv                       |
 # |                                            |
 # | Authors: Andrea Rossoni                    |
 # | License: GPLv3                             |
 # *--------------------------------------------*
 
+# ytdl-mpv version
+VERSION="v0.4.0"
 
 # Default functions
 _rofi() {
@@ -153,6 +155,7 @@ optional arguments:
   -l, --linen  LINEN    rofi vertical lines number [default ${LINEN}]
   -s, --socket SOCKET   mpv socket path [default "${SOCKET}"]
   -w, --width  WIDTH    rofi width [default ${WIDTH}]
+  -V, --version         print ytdl-mpv version
 EOF
 }
 
@@ -523,6 +526,7 @@ while :; do
       -n|--number)   shift; [ -n "$1" ] && [[ $1 =~ ^[0-9]+$ ]] && NUMBER="$1";;
       -l|--linen)    shift; [ -n "$1" ] && [[ $1 =~ ^[0-9]+$ ]] && LINEN="$1";;
       -h|--help)     shift; _usage; exit 0;;
+      -V|--version)  shift; printf 'ytdl-mpv: %s\n' "${VERSION}"; exit 0;;
       -s|--socket)   shift; [ -n "$1" ] && SOCKET="$1";;
       -w|--width)    shift; [ -n "$1" ] && [[ $1 =~ ^[0-9]+$ ]] && WIDTH="$1";;
       *)             break;;
