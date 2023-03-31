@@ -49,7 +49,7 @@
 * `nc` `sqlite3` `xargs`
 * [`mpv`](https://github.com/mpv-player/mpv)
 * [`rofi>=1.6.1`](https://github.com/davatorium/rofi)
-* [`yt-dlp==latest`](https://github.com/yt-dlp/yt-dlp)
+* [`yt-dlp==2023.02.17`](https://github.com/yt-dlp/yt-dlp)
 
 **Opt dependencies**
 
