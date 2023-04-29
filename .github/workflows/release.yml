@@ -1,0 +1,64 @@
+---
+name: Releaser CD
+
+"on":
+  push:
+    tags:
+      - "v[0-9].[0-9].[0-9]+"
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
+        with:
+          fetch-depth: 0
+      - name: Generate changelog latest
+        uses: orhun/git-cliff-action@05204db500127e1d06a0ec1cbd7b720226bb4b3a
+        id: cliff
+        with:
+          config: cliff.toml
+          args: -vv --latest --strip header
+      - name: Get tag
+        shell: bash
+        run: |
+          echo "TAG=${GITHUB_REF:10}" >> "$GITHUB_ENV"
+      - name: Create release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+        with:
+          name: ytdl-mpv ${{ env.TAG }}
+          body: ${{ steps.cliff.outputs.content }}
+          generate_release_notes: true
+  changelog:
+    name: Changelog
+    needs:
+      - release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
+        with:
+          fetch-depth: 0
+      - name: Get tag
+        shell: bash
+        run: |
+          echo "TAG=${GITHUB_REF:10}" >> "$GITHUB_ENV"
+      - name: Refresh changelog
+        uses: orhun/git-cliff-action@05204db500127e1d06a0ec1cbd7b720226bb4b3a
+        with:
+          config: cliff.toml
+          args: --verbose --tag ${{ env.TAG }}
+        env:
+          OUTPUT: CHANGELOG.md
+      - name: Commit changelog
+        uses: EndBug/add-and-commit@61a88be553afe4206585b31aa72387c64295d08b
+        with:
+          message: "chore(CHANGELOG): add ytdl-mpv ${{ env.TAG }} changes"
+          add: 'CHANGELOG.md'
+          new_branch: master
