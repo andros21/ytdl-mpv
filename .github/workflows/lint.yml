@@ -32,8 +32,8 @@ jobs:
           python -m pip install yt-dlp
       - name: Setup some envs
         run: |
-          echo "HOME=$HOME" >> $GITHUB_ENV
-          echo "PATH=$PATH:$HOME/.local/bin" >> $GITHUB_ENV
+          echo "HOME=$HOME" >> "$GITHUB_ENV"
+          echo "PATH=$PATH:$HOME/.local/bin" >> "$GITHUB_ENV"
       - name: Shellcheck scripts
         run: |
           shellcheck -s bash bin/mpvctl
