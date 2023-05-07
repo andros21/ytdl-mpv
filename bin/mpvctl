@@ -18,26 +18,26 @@ SOCKET=/tmp/mpv.sock
 
 # Error function
 _die() {
-   printf '[Error] %s\n' "$@" >&2
-   exit 1
+    printf '[Error] %s\n' "$@" >&2
+    exit 1
 }
 
 # Ensure dependencies
 _checkDep() {
-   type mpv > /dev/null 2>&1 || _die "Cannot find mpv in your \$PATH"
-   type yt-dlp > /dev/null 2>&1 || _die "Cannot find yt-dlp in your \$PATH"
-   type nc > /dev/null 2>&1 && SOCKCMD="nc -U -N $SOCKET"
-   type socat > /dev/null 2>&1 && SOCKCMD="socat - $SOCKET"
-   [ "$SOCKCMD" ] || _die "Cannot find socat or nc in your \$PATH. Install before continue"
+    type mpv > /dev/null 2>&1 || _die "Cannot find mpv in your \$PATH"
+    type yt-dlp > /dev/null 2>&1 || _die "Cannot find yt-dlp in your \$PATH"
+    type nc > /dev/null 2>&1 && SOCKCMD="nc -U -N $SOCKET"
+    type socat > /dev/null 2>&1 && SOCKCMD="socat - $SOCKET"
+    [ "$SOCKCMD" ] || _die "Cannot find socat or nc in your \$PATH. Install before continue"
 }
 
 # Check if sock is idle, otherwise exit
 _checkSock() {
-   [[ -S $SOCKET  ]] || _die "Cannot find mpv socket file"
-   local return_code
-   printf '{ "command:" [ "get_version" ] }' | $SOCKCMD &> /dev/null
-   return_code=$?
-   [[ "$return_code" -eq 0 ]] ||  _die "Cannot connect to mpv socket, connection refused"
+    [[ -S $SOCKET  ]] || _die "Cannot find mpv socket file"
+    local return_code
+    printf '{ "command:" [ "get_version" ] }' | $SOCKCMD &> /dev/null
+    return_code=$?
+    [[ "$return_code" -eq 0 ]] ||  _die "Cannot connect to mpv socket, connection refused"
 }
 
 # Usage (help) message
@@ -71,172 +71,172 @@ EOF
 
 # Check sock status, only for information
 _getSock() {
-   if [ ! -S $SOCKET  ]; then
-      printf 'disabled\n'
-      exit 0
-   fi
-   printf '{ "command:" [ "get_version" ] }' | $SOCKCMD &> /dev/null
-   local return_code=$?
-   if [ ! "$return_code" -eq 0 ]; then
-      printf 'disabled\n'
-      exit 0
-   fi
-   printf 'enabled\n'
-   exit 0
+    if [ ! -S $SOCKET  ]; then
+        printf 'disabled\n'
+        exit 0
+    fi
+    printf '{ "command:" [ "get_version" ] }' | $SOCKCMD &> /dev/null
+    local return_code=$?
+    if [ ! "$return_code" -eq 0 ]; then
+        printf 'disabled\n'
+        exit 0
+    fi
+    printf 'enabled\n'
+    exit 0
 }
 
 # Get current playlist formatted and sorted
 _getPlaylist() {
-   _checkSock
-   # track numbers
-   local trnum
-   trnum=$(_getProperty 'get_property_string' 'playlist-count')
-   # current track number
-   local trcur
-   trcur=$(_getProperty 'get_property_string' 'playlist-pos')
+    _checkSock
+    # track numbers
+    local trnum
+    trnum=$(_getProperty 'get_property_string' 'playlist-count')
+    # current track number
+    local trcur
+    trcur=$(_getProperty 'get_property_string' 'playlist-pos')
 
-   local count
-   count=0
-   while [ "$count" -lt "$trnum" ]; do
-      # current track mark
-      local trcurmark
-      trcurmark=' '
-      # track name
-      local trname
-      local trcurmark
-      trname=$(_getProperty 'get_property_string' "playlist/$count/filename")
-      if [ "$count" -eq "$trcur" ]; then trcurmark='*'; fi
-      # check if local or yt media
-      if [[ $trname =~ ^ytdl://(.*)$ ]]; then
-         # track id
-         local trid
-         trid=${trname:7}
-         # escape quotes
-         trid=$(printf '%s' "$trid" | sed "s/'/''/g")
-         # if cache db given, search yt media using it
-         if [ -n "$1" ] && [ -f "$1" ]; then
-            local db
-            db=$1;
-            # search for track title
-            local trtitle
-            trtitle="$(sqlite3 "${db}" \
+    local count
+    count=0
+    while [ "$count" -lt "$trnum" ]; do
+        # current track mark
+        local trcurmark
+        trcurmark=' '
+        # track name
+        local trname
+        local trcurmark
+        trname=$(_getProperty 'get_property_string' "playlist/$count/filename")
+        if [ "$count" -eq "$trcur" ]; then trcurmark='*'; fi
+        # check if local or yt media
+        if [[ $trname =~ ^ytdl://(.*)$ ]]; then
+            # track id
+            local trid
+            trid=${trname:7}
+            # escape quotes
+            trid=$(printf '%s' "$trid" | sed "s/'/''/g")
+            # if cache db given, search yt media using it
+            if [ -n "$1" ] && [ -f "$1" ]; then
+                local db
+                db=$1;
+                # search for track title
+                local trtitle
+                trtitle="$(sqlite3 "${db}" \
                "select distinct title from main where id='${trid}'" 2> /dev/null)"
-            if [ -z "$trtitle" ]; then
-               local trtitle
-               trtitle=$(yt-dlp --get-filename "$trid" -o "%(title)s" 2> /dev/null)
-               # cache this single search as relative to a NULL query
-               sqlite3 "${db}" \
-                  "insert into main (query,id,title) values ('NULL','${trid}','${trtitle}')" \
-                  2> /dev/null
+                if [ -z "$trtitle" ]; then
+                    local trtitle
+                    trtitle=$(yt-dlp --get-filename "$trid" -o "%(title)s" 2> /dev/null)
+                    # cache this single search as relative to a NULL query
+                    sqlite3 "${db}" \
+                        "insert into main (query,id,title) values ('NULL','${trid}','${trtitle}')" \
+                        2> /dev/null
+                fi
+            else
+                # searching track title, using ytdl
+                local trtitle
+                trtitle=$(yt-dlp --get-filename "$trid" -o "%(title)s" 2> /dev/null)
             fi
-         else
-            # searching track title, using ytdl
+            if [ -z "$trtitle" ]; then
+                printf "[Warning] yt-dlp title search fail\n" >&2
+                local trtitle
+                trtitle="NULL"
+            fi
+        else
+            # other media file type, not yt url
             local trtitle
-            trtitle=$(yt-dlp --get-filename "$trid" -o "%(title)s" 2> /dev/null)
-         fi
-         if [ -z "$trtitle" ]; then
-            printf "[Warning] yt-dlp title search fail\n" >&2
-            local trtitle
-            trtitle="NULL"
-         fi
-      else
-         # other media file type, not yt url
-         local trtitle
-         trtitle=$trname
-      fi
+            trtitle=$trname
+        fi
 
-      local zerocount
-      zerocount=$(printf '%s\n' "$((count+1))" | sed 's/\<[0-9]\>/0&/')
-      printf '%s)%s %s\n' "$zerocount" "$trcurmark" "$trtitle"
-      count=$((count + 1))
-   done
+        local zerocount
+        zerocount=$(printf '%s\n' "$((count+1))" | sed 's/\<[0-9]\>/0&/')
+        printf '%s)%s %s\n' "$zerocount" "$trcurmark" "$trtitle"
+        count=$((count + 1))
+    done
 }
 
 # Save current playlist to given file
 _savePlaylist() {
-   _checkSock
-   [[ -n "$1" ]] || _die 'None path given'
-   [[ -d "$(dirname "$1")" ]] || _die 'Invalid path given'
-   # track numbers
-   local trnum
-   trnum=$(_getProperty 'get_property_string' 'playlist-count')
-   local count
-   count=0
-   while [ "$count" -lt "$trnum" ]; do
-      # track name
-      local trname
-      trname=$(_getProperty 'get_property_string' "playlist/$count/filename")
-      printf '%s\n' "$trname"
-      count=$((count + 1))
-   done > "$1"
+    _checkSock
+    [[ -n "$1" ]] || _die 'None path given'
+    [[ -d "$(dirname "$1")" ]] || _die 'Invalid path given'
+    # track numbers
+    local trnum
+    trnum=$(_getProperty 'get_property_string' 'playlist-count')
+    local count
+    count=0
+    while [ "$count" -lt "$trnum" ]; do
+        # track name
+        local trname
+        trname=$(_getProperty 'get_property_string' "playlist/$count/filename")
+        printf '%s\n' "$trname"
+        count=$((count + 1))
+    done > "$1"
 }
 
 # Load playlist from given file
 _loadPlaylist() {
-   [[ -n "$1" ]] || _die 'None path given'
-   [[ -f "$1" ]] || _die 'Invalid path given'
-   for track in $(<"$1"); do
-      _setProperty 'loadfile' "$track" 'append-play'
-   done
+    [[ -n "$1" ]] || _die 'None path given'
+    [[ -f "$1" ]] || _die 'Invalid path given'
+    for track in $(<"$1"); do
+        _setProperty 'loadfile' "$track" 'append-play'
+    done
 }
 
 # Get loop status
 _getLoop() {
-   #loop state
-   local lstate
-   lstate=$(_getProperty 'get_property_string' 'loop-playlist' \
-      | sed "s/inf/on/" | sed "s/no/off/")
-   if [ -z "$lstate" ]; then
-      exit 1
-   fi
-   printf '%s\n' "$lstate"
+    #loop state
+    local lstate
+    lstate=$(_getProperty 'get_property_string' 'loop-playlist' \
+        | sed "s/inf/on/" | sed "s/no/off/")
+    if [ -z "$lstate" ]; then
+        exit 1
+    fi
+    printf '%s\n' "$lstate"
 }
 
 # Toggle loop playlist
 _toggleLoop() {
-   local lstate
-   lstate=$(_getLoop)
-   if [ -z "$lstate" ]; then
-      exit 1
-   fi
-   if [ "$lstate" == "off" ]; then
-      _setProperty 'set_property' 'loop-playlist' 'inf';
-   else
-      _setProperty 'set_property' 'loop-playlist' 'no';
-   fi
+    local lstate
+    lstate=$(_getLoop)
+    if [ -z "$lstate" ]; then
+        exit 1
+    fi
+    if [ "$lstate" == "off" ]; then
+        _setProperty 'set_property' 'loop-playlist' 'inf';
+    else
+        _setProperty 'set_property' 'loop-playlist' 'no';
+    fi
 }
 
 # Get method to read from socket
 _getProperty() {
-   _checkSock
-   local tosend
-   tosend='{ "command": ['
-   for arg in "$@"; do
-       tosend="$tosend \"$arg\","
-   done
-   tosend=${tosend%?}' ] }'
-   local property
-   property=$(printf '%s\n' "$tosend" | $SOCKCMD 2> /dev/null \
-      | cut -d'"' -f 4 | rev | cut -d'.' -f 2- | rev)
-   printf '%s\n' "$property"
+    _checkSock
+    local tosend
+    tosend='{ "command": ['
+    for arg in "$@"; do
+        tosend="$tosend \"$arg\","
+    done
+    tosend=${tosend%?}' ] }'
+    local property
+    property=$(printf '%s\n' "$tosend" | $SOCKCMD 2> /dev/null \
+        | cut -d'"' -f 4 | rev | cut -d'.' -f 2- | rev)
+    printf '%s\n' "$property"
 }
 
 # Set method to write from socket
 _setProperty() {
-   _checkSock
-   local tosend
-   tosend='{ "command": ['
-   for arg in "$@"; do
-       tosend="$tosend \"$arg\","
-   done
-   tosend=${tosend%?}' ] }'
-   printf '%s\n' "$tosend" | $SOCKCMD &> /dev/null
+    _checkSock
+    local tosend
+    tosend='{ "command": ['
+    for arg in "$@"; do
+        tosend="$tosend \"$arg\","
+    done
+    tosend=${tosend%?}' ] }'
+    printf '%s\n' "$tosend" | $SOCKCMD &> /dev/null
 }
 
 
 # Parse optional argument
 case "$1" in
-   -s | --socket)  shift; [ -n "$1" ] && SOCKET="$1"; shift;;
+    -s | --socket)  shift; [ -n "$1" ] && SOCKET="$1"; shift ;;
 esac
 
 # Check deps
@@ -244,20 +244,20 @@ _checkDep
 
 # Parse positional argument
 case "$1" in
-   add)            shift; for track in "$@"; do _setProperty 'loadfile' "$track" 'append-play'; done;;
-   check)          _getSock;;
-   clear)          _setProperty 'playlist_clear';;
-   load)           _loadPlaylist "$2";;
-   loop)           _toggleLoop;;
-   loop-status)    _getLoop;;
-   next)           _setProperty 'playlist_next';;
-   playlist)       _getPlaylist "$2" "$3";;
-   prev)           _setProperty 'playlist_prev';;
-   rm)             _setProperty 'playlist_remove' "$2";;
-   save)           _savePlaylist "$2";;
-   stop)           _setProperty 'quit';;
-   toggle)         _setProperty 'cycle' 'pause';;
-   track)          _setProperty 'set_property' 'playlist-pos' "$2";;
-   -h | --help)    shift; _usage; exit 0;;
-   *)              shift; _usage; exit 1;;
+    add)            shift; for track in "$@"; do _setProperty 'loadfile' "$track" 'append-play'; done ;;
+    check)          _getSock ;;
+    clear)          _setProperty 'playlist_clear' ;;
+    load)           _loadPlaylist "$2" ;;
+    loop)           _toggleLoop ;;
+    loop-status)    _getLoop ;;
+    next)           _setProperty 'playlist_next' ;;
+    playlist)       _getPlaylist "$2" "$3" ;;
+    prev)           _setProperty 'playlist_prev' ;;
+    rm)             _setProperty 'playlist_remove' "$2" ;;
+    save)           _savePlaylist "$2" ;;
+    stop)           _setProperty 'quit' ;;
+    toggle)         _setProperty 'cycle' 'pause' ;;
+    track)          _setProperty 'set_property' 'playlist-pos' "$2" ;;
+    -h | --help)    shift; _usage; exit 0 ;;
+    *)              shift; _usage; exit 1 ;;
 esac
