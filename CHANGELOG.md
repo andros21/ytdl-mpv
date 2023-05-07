@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.4.1] - 2023-05-07
+
+### Bug Fixes
+
+- cli errors handling ([#22](https://github.com/andros21/ytdl-mpv/issues/22))
+
+### Build
+
+- bump actions/checkout from 3.3.0 to 3.4.0 ([#19](https://github.com/andros21/ytdl-mpv/issues/19))
+- bump actions/checkout from 3.4.0 to 3.5.0 ([#20](https://github.com/andros21/ytdl-mpv/issues/20))
+- bump actions/checkout from 3.5.0 to 3.5.2 ([#21](https://github.com/andros21/ytdl-mpv/issues/21))
+- fix spellcheck errors
+- add release workflow
+- bump EndBug/add-and-commit from 9.1.1 to 9.1.2 ([#24](https://github.com/andros21/ytdl-mpv/issues/24))
+- bump orhun/git-cliff-action from 2.0.5 to 2.0.6 ([#23](https://github.com/andros21/ytdl-mpv/issues/23))
+- bump version to v0.4.1
+
+### Features
+
+- pin `yt-dlp` version
+
+### Miscellaneous Tasks
+
+- add changelog until tag v0.4.0
+
 ## [v0.4.0] - 2023-02-26
 
 ### Bug Fixes
