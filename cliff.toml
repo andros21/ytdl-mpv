@@ -15,10 +15,15 @@ body = """
 {% else %}\
     ## [unreleased]
 {% endif %}\
+{% if previous %}\
+    {% if previous.commit_id %}
+        **Full Changelog**: [`{{ previous.commit_id | truncate(length=7, end="") }}...{{ commit_id | truncate(length=7, end="") }}`](https://github.com/andros21/ytdl-mpv/compare/{{ previous.commit_id }}...{{ commit_id }})
+    {% endif %}\
+{% endif %}\
 {% for group, commits in commits | group_by(attribute="group") %}
     ### {{ group | upper_first }}
     {% for commit in commits %}
-        - {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message }}\
+        - [`{{ commit.id | truncate(length=7, end="") }}`](https://github.com/andros21/ytdl-mpv/commit/{{ commit.id }}) {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message }}\
     {% endfor %}
 {% endfor %}\n
 """
