@@ -125,7 +125,7 @@ _info() {
 # Ensure dependencies
 _checkDep() {
     local deps
-    deps=(mpv mpvctl nc rofi sqlite3 yt-dlp xargs xclip)
+    deps=(mpv mpvctl socat rofi sqlite3 yt-dlp xargs xclip)
     for dep in "${deps[@]}"; do
         type "$dep" > /dev/null 2>&1 || {
             if [ "$dep" == "xclip" ]; then
