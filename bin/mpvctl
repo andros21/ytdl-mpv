@@ -26,9 +26,8 @@ _die() {
 _checkDep() {
     type mpv > /dev/null 2>&1 || _die "Cannot find mpv in your \$PATH"
     type yt-dlp > /dev/null 2>&1 || _die "Cannot find yt-dlp in your \$PATH"
-    type nc > /dev/null 2>&1 && SOCKCMD="nc -U -N $SOCKET"
-    type socat > /dev/null 2>&1 && SOCKCMD="socat - $SOCKET"
-    [ "$SOCKCMD" ] || _die "Cannot find socat or nc in your \$PATH. Install before continue"
+    type socat > /dev/null 2>&1 || _die "Cannot find socat in your \$PATH"
+    SOCKCMD="socat - $SOCKET"
 }
 
 # Check if sock is idle, otherwise exit
@@ -71,7 +70,7 @@ EOF
 
 # Check sock status, only for information
 _getSock() {
-    if [ ! -S $SOCKET  ]; then
+    if [ ! -S "$SOCKET"  ]; then
         printf 'disabled\n'
         exit 0
     fi

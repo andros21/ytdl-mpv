@@ -28,7 +28,7 @@ jobs:
       - name: Install deps
         run: |
           sudo apt update
-          sudo apt install mpv rofi
+          sudo apt install socat mpv rofi
           python -m pip install yt-dlp
       - name: Setup some envs
         run: |
