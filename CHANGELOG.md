@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.5.0] - 2023-06-11
+
+**Full Changelog**: [`7748637...a984f78`](https://github.com/andros21/ytdl-mpv/compare/7748637f7aa123dffa0cc32b0cc6bda405d1f591...a984f788eb657a6de2df150ce463621c049a2fb4)
+
+### Bug Fixes
+
+- [`d241adf`](https://github.com/andros21/ytdl-mpv/commit/d241adfc8d095aa51c004057d6a3bffec5b0d28a) [**breaking**] remove potentially faulty `nc`, use `socat` ([#26](https://github.com/andros21/ytdl-mpv/issues/26))
+
+### Build
+
+- [`60f40ea`](https://github.com/andros21/ytdl-mpv/commit/60f40ea3ae9eff4feb832ca70771fbdc242d44cc) bump EndBug/add-and-commit from 9.1.2 to 9.1.3 ([#25](https://github.com/andros21/ytdl-mpv/issues/25))
+- [`7199264`](https://github.com/andros21/ytdl-mpv/commit/71992640c619e5c9980e53e1e6db005aac6b3628) bump actions/checkout from 3.5.2 to 3.5.3 ([#28](https://github.com/andros21/ytdl-mpv/issues/28))
+- [`a984f78`](https://github.com/andros21/ytdl-mpv/commit/a984f788eb657a6de2df150ce463621c049a2fb4) bump version to v0.5.0
+
+### Features
+
+- [`ccef095`](https://github.com/andros21/ytdl-mpv/commit/ccef095bbf7999eaa4b515953b083372af887ec8) override default ballot multi-select str ([#27](https://github.com/andros21/ytdl-mpv/issues/27))
+
+### Miscellaneous Tasks
+
+- [`a6ae577`](https://github.com/andros21/ytdl-mpv/commit/a6ae577da8e45a4c96932ef218ef0cd4899cf569) add ytdl-mpv v0.4.1 changes
+- [`1c43623`](https://github.com/andros21/ytdl-mpv/commit/1c43623ebfd4307d48945d9c81acc6910fad2abf) wrong tag pattern
+- [`44092c1`](https://github.com/andros21/ytdl-mpv/commit/44092c1ec5b86ec63dc88af3ed7929a1f630e39e) git-cliff changelog detailed mode
+
 ## [v0.4.1] - 2023-05-07
 
 **Full Changelog**: [`c1a7c43...7748637`](https://github.com/andros21/ytdl-mpv/compare/c1a7c43b4069f5470636bfc7aad1a4c2b14d7672...7748637f7aa123dffa0cc32b0cc6bda405d1f591)
