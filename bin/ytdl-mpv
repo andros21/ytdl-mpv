@@ -15,7 +15,7 @@ VERSION="v0.4.1"
 
 # Default functions
 _rofi() {
-    rofi -dmenu -no-auto-select -i -p "$PROMPT" "$@"
+    rofi -dmenu -ballot-selected-str "+ " -ballot-unselected-str "  " -no-auto-select -i -p "$PROMPT" "$@"
 }
 _rofi_error() {
     rofi -e "$1"
