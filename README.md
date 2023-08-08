@@ -47,9 +47,16 @@
 **Dependencies**
 
 * `socat` `sqlite3` `xargs`
-* [`mpv`](https://github.com/mpv-player/mpv)
+* [`mpv>0.35.1`](https://github.com/mpv-player/mpv)
 * [`rofi>=1.6.1`](https://github.com/davatorium/rofi)
-* [`yt-dlp==2023.02.17`](https://github.com/yt-dlp/yt-dlp)
+* [`yt-dlp==2023.07.06`](https://github.com/yt-dlp/yt-dlp)
+
+> [!WARNING]
+> If your distro doesn't ship `mpv==0.36.0` \
+> Is sufficient that it ships `mpv==0.35.1` with
+> [this patch](https://src.fedoraproject.org/rpms/mpv/raw/f38/f/mpv-0.35.1-yt-dlp-hook-fix.patch) to work with upstream `yt-dlp` \
+> Otherwise free to remain with `mpv<=0.35.1` and `yt-dlp==2023.02.17`
+
 
 **Opt dependencies**
 
