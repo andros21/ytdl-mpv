@@ -80,6 +80,7 @@ _helpEdit() {
    _rofi -theme-str "$STYLE" -mesg "--  edit menu key bindings  --" > /dev/null
 [Enter] | Play playlist item
 [${remove_track}] | Remove playlist item
+[$(printf '%s' "${key_enter}" | sed 's/Return/⏎/')] | Explore chapters
 [$(printf '%s' "${multi_select}" | sed 's/Tab/⇄/')] | Multi selection
 [$(printf '%s' "${key_return}" | sed 's/Left/←/')] | Return
 EOF
