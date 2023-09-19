@@ -65,9 +65,10 @@ positional arguments:
   stop           always stop playback
   toggle         toggle playback
   track          jump to playlist track number
-  ctrack)        get current track playlist number
-  chapters)      get chapter list (if available)
-  chapter)       jump to track chapter number
+  ctrack         get current track playlist number
+  chapters       get chapter list (if available)
+  chapter        jump to track chapter number
+  cchapter       get current chapter (-1 if no chapters)
 
 optional arguments:
   -h, --help     print this help
@@ -360,6 +361,7 @@ case "$1" in
     ctrack)         _getProperty 'playlist-pos' ;;
     chapters)       _getChapters "$2" "$3" ;;
     chapter)        _setProperty 'set_property' 'chapter' "$2" ;;
+    cchapter)       _getProperty 'chapter' | sed 's/null/-1/' ;;
     -h | --help)    shift; _usage; exit 0 ;;
     *)              shift; _usage; exit 1 ;;
 esac

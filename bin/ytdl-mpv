@@ -376,10 +376,15 @@ _editMenuChapters() {
             if [ "$(_ytdl_mpvctl ctrack)" -eq "$stn" ]; then
                 _ytdl_mpvctl chapter "$ch"
             else
+                local i
+                i=0
                 _ytdl_mpvctl toggle
                 _ytdl_mpvctl track "$stn"
-                sleep 3
-                _ytdl_mpvctl chapter "$ch"
+                until [ "$(_ytdl_mpvctl cchapter)" -eq "$ch" ]; do
+                   _ytdl_mpvctl chapter "$ch"
+                   [[ $i -gt 1000000 ]] && break
+                   i=$((i+1))
+                done
                 _ytdl_mpvctl toggle
             fi
         fi
