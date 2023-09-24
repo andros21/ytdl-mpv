@@ -49,7 +49,7 @@
 * `socat` `sqlite3` `xargs`
 * [`mpv>0.35.1`](https://github.com/mpv-player/mpv)
 * [`rofi>=1.6.1`](https://github.com/davatorium/rofi)
-* [`yt-dlp==2023.07.06`](https://github.com/yt-dlp/yt-dlp)
+* [`yt-dlp==2023.09.24`](https://github.com/yt-dlp/yt-dlp)
 
 > [!WARNING]
 > If your distro doesn't ship `mpv==0.36.0` \
