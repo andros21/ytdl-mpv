@@ -9,14 +9,11 @@
   </a>
 <br>
   <a href="https://github.com/andros21/ytdl-mpv/actions/workflows/lint.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/andros21/ytdl-mpv/lint.yml?branch=master&label=Lint%20CI&logo=github&style=flat-square" alt="Lint CI">
-  </a>
-   <a href="https://github.com/davatorium/rofi">
-    <img src="https://img.shields.io/badge/rofi-interface-important?logo=youtube&style=flat-square" alt="rofi">
-  </a>
+    <img src="https://img.shields.io/github/actions/workflow/status/andros21/ytdl-mpv/lint.yml?branch=master&label=Lint%20CI&logo=github&style=flat-square" alt="Lint CI"></a>
+  <a href="https://github.com/davatorium/rofi">
+    <img src="https://img.shields.io/badge/rofi-interface-important?logo=youtube&style=flat-square" alt="rofi"></a>
   <a href="https://github.com/andros21/ytdl-mpv/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/andros21/ytdl-mpv?color=blue&label=License&style=flat-square" alt="License">
-  </a>
+    <img src="https://img.shields.io/github/license/andros21/ytdl-mpv?color=blue&label=License&style=flat-square" alt="License"></a>
   <h4 align="center">Rofi script to browse and play YouTube contents <br>using <a href="https://github.com/yt-dlp/yt-dlp/">yt-dlp</a> and <a href="https://github.com/mpv-player/mpv">mpv</a></h4>
   <div align="center">
     <a href="#star-features">Features</a>
@@ -31,25 +28,25 @@
 
 ## :star: Features
 
-* Search history and yt query cache
-* Customize script using available flags
-* Simple and intuitive rofi menu
-  * Play video, audio
-  * Append to playlist
-  * Loop playlist
-  * Edit current playlist
-  * Save/Load current playlist
-  * Help for key bindings
-  * ...
+- Search history and yt query cache
+- Customize script using available flags
+- Simple and intuitive rofi menu
+  - Play video, audio
+  - Append to playlist
+  - Loop playlist
+  - Edit current playlist
+  - Save/Load current playlist
+  - Help for key bindings
+  - ...
 
 ## :rocket: Setup
 
 **Dependencies**
 
-* `socat` `sqlite3` `xargs`
-* [`mpv>0.35.1`](https://github.com/mpv-player/mpv)
-* [`rofi>=1.6.1`](https://github.com/davatorium/rofi)
-* [`yt-dlp==2023.10.13`](https://github.com/yt-dlp/yt-dlp)
+- `socat` `sqlite3` `xargs`
+- [`mpv>0.35.1`](https://github.com/mpv-player/mpv)
+- [`rofi>=1.6.1`](https://github.com/davatorium/rofi)
+- [`yt-dlp==2023.10.13`](https://github.com/yt-dlp/yt-dlp)
 
 > [!WARNING]
 > If your distro doesn't ship `mpv==0.36.0` \
@@ -57,10 +54,9 @@
 > [this patch](https://src.fedoraproject.org/rpms/mpv/raw/f38/f/mpv-0.35.1-yt-dlp-hook-fix.patch) to work with upstream `yt-dlp` \
 > Otherwise free to remain with `mpv<=0.35.1` and `yt-dlp==2023.02.17`
 
-
 **Opt dependencies**
 
-* `xclip` for copy yt video id in clipboard
+- `xclip` for copy yt video id in clipboard
 
 **Install**
 
