@@ -31,12 +31,12 @@
 - Search history and yt query cache
 - Customize script using available flags
 - Simple and intuitive rofi menu
-  - Play video or audio [`Alt+v`]
+  - Play video or audio [`Alt+v`]()
   - Append to playlist [`Alt+Tab`]()
   - Loop playlist
   - Edit current playlist [`Alt+r`]()
   - Save/Load current playlist
-  - Help for key bindings [`Alt+h`]
+  - Help for key bindings [`Alt+h`]()
   - Jump to chapters [`Alt+Enter`]()
   - ...
 
