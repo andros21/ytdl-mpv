@@ -80,6 +80,7 @@ _helpEdit() {
    _rofi -theme-str "$STYLE" -mesg "--  edit menu key bindings  --" > /dev/null
 [Enter] | Play playlist item
 [${remove_track}] | Remove playlist item
+[$(printf '%s' "${key_enter}" | sed 's/Return/⏎/')] | Explore chapters
 [$(printf '%s' "${multi_select}" | sed 's/Tab/⇄/')] | Multi selection
 [$(printf '%s' "${key_return}" | sed 's/Left/←/')] | Return
 EOF
@@ -95,17 +96,25 @@ remove_track="Alt+r"
 key_help="Alt+h"
 multi_select="Alt+Tab"
 key_return="Alt+Left"
+key_enter="Alt+Return"
 
 # Default envs
 CACHEDIR=$HOME/.cache/ytdl-mpv
+[ -d "$CACHEDIR" ] || mkdir -p "$CACHEDIR"
+TMPDIR=$XDG_RUNTIME_DIR/ytdl-mpv
+[ -n "$XDG_RUNTIME_DIR" ] || TMPDIR=/tmp/ytdl-mpv
+[ -d "$TMPDIR" ] || mkdir -p "$TMPDIR"
+
 DB=$CACHEDIR/ytdl-mpv.sqlite3
-DELAY=0.3
+SOCKET=$TMPDIR/ytdl-mpv.sock
 HISTORY=$HOME/.ytdl-mpv.history
+PLAYDIR=$HOME/.local/share/ytdl-mpv
+[ -d "$PLAYDIR" ] || mkdir -p "$PLAYDIR"
+
+DELAY=0.3
 LINEN=16
 NUMBER=20
-PLAYDIR=$HOME/.local/share/ytdl-mpv
 PROMPT='ytdl-mpv > '
-SOCKET=/tmp/ytdl-mpv.sock
 WIDTH=70
 XCLIP=1
 
@@ -125,7 +134,7 @@ _info() {
 # Ensure dependencies
 _checkDep() {
     local deps
-    deps=(mpv mpvctl socat rofi sqlite3 yt-dlp xargs xclip)
+    deps=(mpv mpvctl socat rofi sqlite3 yt-dlp xargs jq iconv xclip)
     for dep in "${deps[@]}"; do
         type "$dep" > /dev/null 2>&1 || {
             if [ "$dep" == "xclip" ]; then
@@ -135,6 +144,8 @@ _checkDep() {
             fi
         }
     done
+    (echo "D̲eep̲ ̲P̲u̲r̲ple" | iconv -f utf-8 -t ascii//translit &>/dev/null) \
+        || _die "Unsupported iconv flavour, install gnu-libiconv"
 }
 
 # Ensure internet connection is on
@@ -204,7 +215,7 @@ _isCachedQuery() {
     if [ -f "$DB" ]; then
         local count
         count="$(sqlite3 "${DB}" \
-         "select count(*) from main where query='${query}'" 2> /dev/null)"
+         "select count(*) from main where query='${query}'")"
         if [[ "$count" -gt 0 ]]; then printf "cached"; fi
     fi
 }
@@ -215,8 +226,10 @@ _getCachedQuery() {
     local query
     query="$1"
     sqlite3 "${DB}" \
-        "select title from main where query='${query}'" 2> /dev/null \
-        | awk '{ print FNR ") " $0 }' | sed 's/\<[0-9]\>/0&/'
+        "select nchapters,title from main where query='${query}'" \
+        | sed 's/^0|/[##] /;s/\(^[0-9]\+\)|/[\1] /' \
+        | awk '{ print FNR ") " $0 }' \
+        | sed 's/^[0-9])/0&/;s/\[\([0-9]\)\]/[0\1]/'
 }
 
 # Get id of yt content from cached table
@@ -228,7 +241,7 @@ _getCachedIdQuery() {
     # escape quotes
     title=$(printf '%s' "$title" | sed "s/'/''/g")
     printf '%s' "$(sqlite3 "${DB}" \
-      "select id from main where query='${query}' and title='${title}'" 2> /dev/null)"
+      "select id from main where query='${query}' and title='${title}'")"
 }
 
 # Cache a query inside main table
@@ -236,16 +249,17 @@ _cacheQuery() {
     local query
     query="$1"
     # create main table and cache items
-    sqlite3 "${DB}" "create table if not exists main (query str, id str, title str, unique(title))"
-    sed "s/;//g" "$CACHEDIR/$query" | sed "s/\"/\'/g" | sed -E "N;s/(.*)\n(.*)/${query};\2;\1/" \
-        | sqlite3 -separator ';' "${DB}" ".import /dev/stdin main"
+    sqlite3 "${DB}" \
+        "create table if not exists main (query str,id str,title str,nchapters int,chapters str,unique(title))"
+    sqlite3 -separator ',' "${DB}" ".import ${TMPDIR}/${query} main"
 }
 
 # Delete a cached query inside main table
 _deleteQuery() {
     local query
     query="$1"
-    sqlite3 "${DB}" "delete from main where query='${query}'" 2> /dev/null
+    sqlite3 "${DB}" "delete from main where query='${query}'" \
+        || _die "Deleting query ${query} from cache db"
 }
 
 # ytdl-mpv main interactive menu
@@ -282,44 +296,42 @@ _editMenu() {
     local args
     local STYLE="window {width: ${WIDTH}%;} listview {lines: ${LINEN};}"
     args=( -kb-custom-1 "${remove_track}"
+        -kb-custom-2 "${key_enter}"
         -kb-custom-4 "${key_help}"
         -kb-custom-5 "${key_return}"
         -kb-accept-alt "${multi_select}"
         -theme-str "$STYLE"
         -multi-select
         -no-custom
+        -format i
     -mesg "-- loop [$(_ytdl_mpvctl loop-status)] -- edit menu: edit playlist, help [Alt+h] --" )
     # get current playlist
     local pl
     pl="$(_ytdl_mpvctl playlist "${DB}")"
     # selected track
     local rofi_exit
-    strs="$(printf '%s' "${pl}" | _rofi "${args[@]}")"
+    stns="$(printf '%s' "${pl}" | _rofi "${args[@]}")"
     rofi_exit="$?"
     # check if help requested
     if [[ "${rofi_exit}" -eq 13 ]]; then
         _helpEdit; _editMenu;
     else
-        if [ -z "$strs" ]; then
+        if [ -z "$stns" ]; then
             _info "Nothing selected"
             exit 0
         elif [[ "${rofi_exit}" -eq 14 ]]; then
             _info "Back to main menu"
             _mainMenu; return;
         else
-            local i
             local IFS
-            i=1
             IFS=$'\n'
-            for str in $strs; do
-                local stn
+            for stn in $stns; do
                 # get track number
-                stn="$(printf '%s' "${str::2}" | sed 's/^0*//')"
                 case "${rofi_exit}" in
-                    0)  _ytdl_mpvctl track "$((stn-i))"; return ;;
-                    10) _ytdl_mpvctl rm "$((stn-i))" ;;
+                    0)  _ytdl_mpvctl track "$stn"; return ;;
+                    10) _ytdl_mpvctl rm "$stn" ;;
+                    11) _editMenuChapters "$stn" "$pl"; return ;;
                 esac
-                i=$((i+1))
             done
             # recursive until explicit exit
             sleep $DELAY; _editMenu
@@ -327,10 +339,61 @@ _editMenu() {
     fi
 }
 
+# Edit menu for track chapters (if available)
+# display available chapters, start/choose between them
+_editMenuChapters() {
+    local stn
+    stn=$1
+    local stn1
+    stn1=$((stn+1))
+    local trtitle
+    trtitle=$(printf '%s' "$2" | sed "$stn1 q;d")
+    # if no chapters available play as usual
+    # otherwise rofi menu to choose between chapters
+    if printf '%s' "$trtitle" | grep -Fq ' [##] '; then
+        _ytdl_mpvctl track "$stn"
+    else
+        local ch
+        local STYLE="window {width: ${WIDTH}%;} listview {lines: ${LINEN};}"
+        trtitle=${trtitle:9}
+        trtitle=${trtitle:0:30}
+        # selected chapter
+        local rofi_exit
+        ch=$(_ytdl_mpvctl chapters "$stn" "${DB}" \
+                | _rofi -theme-str "$STYLE" -kb-custom-5 "${key_return}" \
+            -no-custom -format i -mesg "-- chapters menu:${trtitle}[...], simply [Enter] --")
+        rofi_exit="$?"
+        if [ -z "$ch" ]; then
+            _info "Nothing selected"
+            exit 0
+        elif [[ "${rofi_exit}" -eq 14 ]]; then
+            _info "Back to main menu"
+            _editMenu; return;
+        else
+            # if selected track is the current track
+            # just change chapter
+            # otherwise change track and then change chapter
+            if [ "$(_ytdl_mpvctl ctrack)" -eq "$stn" ]; then
+                _ytdl_mpvctl chapter "$ch"
+            else
+                local i
+                i=0
+                _ytdl_mpvctl toggle
+                _ytdl_mpvctl track "$stn"
+                until [ "$(_ytdl_mpvctl cchapter)" -eq "$ch" ]; do
+                   _ytdl_mpvctl chapter "$ch"
+                   [[ $i -gt 1000000 ]] && break
+                   i=$((i+1))
+                done
+                _ytdl_mpvctl toggle
+            fi
+        fi
+    fi
+}
+
 # Save menu,
 # save the current playlist as text file
 _saveMenu() {
-    mkdir -p "$PLAYDIR"
     # saved playlists
     local saved
     local rofi_exit
@@ -441,20 +504,25 @@ _startPlay() {
     # yt-dlp search
     local query
     query="$(_hashStr "${search}:${NUMBER}")"
-    mkdir -p "$CACHEDIR"
     # if not cached or marked as to_recache
     # search it and cache it
     local cache
     cache="$(_isCachedQuery "$query")"
     if [ -z "$cache" ] || [ "$to_recache" -eq 1 ]; then
         if [ "$to_recache" -eq 1 ]; then _deleteQuery "$query"; fi
+        # steps to digest single json payload:
+        #  * jq from json to csv
+        #  * remove left|right double quotes (“|”)
+        #  * translite from utf8 to ascii
         yt-dlp --default-search \
-            ytsearch"$NUMBER" "$search" --get-id --get-title \
-            2> /dev/null > "$CACHEDIR/$query" &
+            ytsearch"$NUMBER" "$search" --dump-single-json \
+            | query=$query jq -r '.entries[] | {query:env.query,id:.id,title:.title,nchapters:(.chapters|length),chapters:(.chapters|if .==null then [] else [.[].title] end)} | map(tostring) | @csv' \
+            | sed 's/\xE2\x80\x9D//g;s/\xE2\x80\x9C//g' \
+            | iconv -f utf-8 -t ascii//translit \
+            > "$TMPDIR/$query" &
         wait "$!"; yt_dlp_exit="$?"
         [[ "$yt_dlp_exit" -eq 0 ]] || _die "yt-dlp search fail, exit code ${yt_dlp_exit}"
-        _cacheQuery "$query" 2> /dev/null
-        rm -f "$CACHEDIR/$query"
+        _cacheQuery "$query" || _die "Adding query ${query} inside cache db"
     fi
     # check if ytdl-mpv is already running, if yes append track to playlist
     local args
@@ -497,7 +565,7 @@ _startPlay() {
             local IFS
             IFS=$'\n'
             for strack in $stracks; do
-                strack="${strack:4}"
+                strack="${strack:9}"
                 local id
                 id="ytdl://$(_getCachedIdQuery "$query" "$strack")"
                 # check if ytdl socket is idle, if yes append instead play

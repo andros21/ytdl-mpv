@@ -23,7 +23,7 @@
     <a href="#runner-run">Run</a>
   </div>
   <br>
-   <img src="https://user-images.githubusercontent.com/58751603/191463905-c7154c4b-9f4c-460b-85c1-7c5cdbb74d1c.gif" alt="Demo" width="570">
+   <img src="https://github.com/andros21/ytdl-mpv/assets/58751603/62ea0632-0b6a-4975-a23d-870e98dfa6de" alt="Demo" width="570">
 </div>
 
 ## :star: Features
@@ -31,19 +31,20 @@
 - Search history and yt query cache
 - Customize script using available flags
 - Simple and intuitive rofi menu
-  - Play video, audio
-  - Append to playlist
+  - Play video or audio [`Alt+v`]
+  - Append to playlist [`Alt+Tab`]()
   - Loop playlist
-  - Edit current playlist
+  - Edit current playlist [`Alt+r`]()
   - Save/Load current playlist
-  - Help for key bindings
+  - Help for key bindings [`Alt+h`]
+  - Jump to chapters [`Alt+Enter`]()
   - ...
 
 ## :rocket: Setup
 
 **Dependencies**
 
-- `socat` `sqlite3` `xargs`
+- `socat` `sqlite3` `xargs` `jq` `iconv`
 - [`mpv>0.35.1`](https://github.com/mpv-player/mpv)
 - [`rofi>=1.6.1`](https://github.com/davatorium/rofi)
 - [`yt-dlp==2023.10.13`](https://github.com/yt-dlp/yt-dlp)
@@ -70,5 +71,5 @@ make install
 
 ## :runner: Run
 
-Is advisable to key bind `ytdl-mpv`, so that rofi menu can be opened wherever you are!\
+Is advisable to key bind (e.g. [`Cmd+m`]()) `ytdl-mpv`, so that rofi menu can be opened wherever you are!\
 For **debugging purposes**, instead, could be useful run `ytdl-mpv` inside a shell to view stdout/stderr
