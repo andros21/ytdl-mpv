@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.0] - 2023-11-11
+
+**Full Changelog**: [`a984f78...dd1ab33`](https://github.com/andros21/ytdl-mpv/compare/a984f788eb657a6de2df150ce463621c049a2fb4...dd1ab3361e793824fea7a8693b5ad70090819cc4)
+
+### Build
+
+- [`eeaaae2`](https://github.com/andros21/ytdl-mpv/commit/eeaaae274927c8de18b182123413d76081a92408) bump actions/checkout from 3.5.3 to 3.6.0 ([#30](https://github.com/andros21/ytdl-mpv/issues/30))
+- [`f7ac523`](https://github.com/andros21/ytdl-mpv/commit/f7ac523d3e1f8a9736677f2772d1a118fc02a7ce) bump orhun/git-cliff-action from 2.0.6 to 2.1.0 ([#31](https://github.com/andros21/ytdl-mpv/issues/31))
+- [`643e9a0`](https://github.com/andros21/ytdl-mpv/commit/643e9a07265e0aff811a267fc4c149bf856155eb) bump actions/checkout from 3.6.0 to 4.0.0 ([#32](https://github.com/andros21/ytdl-mpv/issues/32))
+- [`337b5af`](https://github.com/andros21/ytdl-mpv/commit/337b5afa40b94fb6e86811d87a24a5e1169c1425) bump actions/checkout from 4.0.0 to 4.1.0 ([#33](https://github.com/andros21/ytdl-mpv/issues/33))
+- [`23ecb31`](https://github.com/andros21/ytdl-mpv/commit/23ecb3123ae14d76f692228fb186ae5064c5c668) bump orhun/git-cliff-action from 2.1.0 to 2.1.1 ([#34](https://github.com/andros21/ytdl-mpv/issues/34))
+- [`10a238d`](https://github.com/andros21/ytdl-mpv/commit/10a238dea6d131d4cdded7a4dcb8eee53c647f6f) bump actions/checkout from 4.1.0 to 4.1.1 ([#35](https://github.com/andros21/ytdl-mpv/issues/35))
+- [`6b5337d`](https://github.com/andros21/ytdl-mpv/commit/6b5337da23c79b81249b6c7ea530318f4d1c7953) bump orhun/git-cliff-action from 2.1.1 to 2.2.0 ([#36](https://github.com/andros21/ytdl-mpv/issues/36))
+
+### Features
+
+- [`e5d6d4b`](https://github.com/andros21/ytdl-mpv/commit/e5d6d4bb73ae19277196e5ecd81fc9618b888590) [**breaking**] add initial support to track chapters ([#29](https://github.com/andros21/ytdl-mpv/issues/29))
+
+### Miscellaneous Tasks
+
+- [`d24b0cb`](https://github.com/andros21/ytdl-mpv/commit/d24b0cb84fd706b63200af94a0953e4112fb0a45) add ytdl-mpv v0.5.0 changes
+- [`eca95d2`](https://github.com/andros21/ytdl-mpv/commit/eca95d2931efd8c163522bf020e8ecfff8a021b9) update pinned deps
+- [`506381d`](https://github.com/andros21/ytdl-mpv/commit/506381d3d818ac938118a40eb32aa2a7bc12ce7e) bump `yt-dlp` to latest release
+- [`8bab6d8`](https://github.com/andros21/ytdl-mpv/commit/8bab6d88397489a2bf6ef717bc9de2f8869c75b6) bump `yt-dlp` to latest release
+- [`b79aa99`](https://github.com/andros21/ytdl-mpv/commit/b79aa9938415385a86301b52318c7bf1a9b089ef) bump `yt-dlp` to latest release
+- [`ca27617`](https://github.com/andros21/ytdl-mpv/commit/ca2761769fe01ffe956ef95f8f70405cc3e3658f) fix two keybind examples style
+- [`dd1ab33`](https://github.com/andros21/ytdl-mpv/commit/dd1ab3361e793824fea7a8693b5ad70090819cc4) bump version to v0.6.0
+
+### Refactor
+
+- [`0957657`](https://github.com/andros21/ytdl-mpv/commit/095765701a636e074ea4e25f0e3a75dfcfaf4578) prettier refactor
+
 ## [v0.5.0] - 2023-06-11
 
 **Full Changelog**: [`7748637...a984f78`](https://github.com/andros21/ytdl-mpv/compare/7748637f7aa123dffa0cc32b0cc6bda405d1f591...a984f788eb657a6de2df150ce463621c049a2fb4)
