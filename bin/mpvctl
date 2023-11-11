@@ -128,7 +128,7 @@ _getPlaylist() {
             # search for track title
             local trtitle
             trtitle="$(sqlite3 "${db}" \
-               "select distinct nchapters,title from main where id='${trid}'")"
+               "SELECT DISTINCT nchapters,title FROM main WHERE id='${trid}'")"
             if [ -z "$trtitle" ]; then
                local csv
                csv=$(
@@ -138,8 +138,8 @@ _getPlaylist() {
                      ($ICONV -f utf-8 -c -t ascii || true)
                )
                # cache this single search as relative to a NULL query
-               sqlite3 "${db}" "insert into main (query,id,title,nchapters,chapters) values (${csv})"
-               trtitle="$(sqlite3 "${db}" "select nchapters,distinct title from main where id='${trid}'")"
+               sqlite3 "${db}" "INSERT INTO main (id,title,nchapters,chapters) VALUES (${csv})"
+               trtitle="$(sqlite3 "${db}" "SELECT DISTINCT nchapters,title FROM main WHERE id='${trid}'")"
             fi
          else
             # searching track title, using ytdl
@@ -197,10 +197,10 @@ _getChaptersDb() {
    trid=${trid:7}
    # number of chapters
    local nch
-   nch="$(sqlite3 "${db}" "select nchapters from main where id='${trid}'")"
+   nch="$(sqlite3 "${db}" "SELECT nchapters FROM main WHERE id='${trid}'")"
    if [ "$nch" -gt "0" ]; then
       # get chapters list from sqlite3 db
-      sqlite3 "$db" "select chapters from main where id='${trid}'" |
+      sqlite3 "$db" "SELECT chapters FROM main WHERE id='${trid}'" |
          jq -r '.[]' |
          awk '{ print FNR ") " $0 }' |
          sed 's/^[0-9])/0&/'

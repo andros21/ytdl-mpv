@@ -48,7 +48,10 @@ _loadPlaylist() {
    _ytdl_mpvctl load "$1" && _info "Playlist loaded from ... \"$1\""
 }
 _flushCache() {
-   rm -fr "$CACHEDIR" && _info "ytdl-mpv cache flushed"
+   [ -f "${DB}" ] &&
+      sqlite3 "$DB" "DROP TABLE main" &&
+      sqlite3 "$DB" "CREATE TABLE main (query STR,id STR,title STR,nchapters INT,chapters STR)" &&
+      _info "ytdl-mpv cache flushed"
 }
 _flushHist() {
    rm -fr "$HISTORY" && _info "ytdl-mpv search history flushed"
@@ -222,7 +225,7 @@ _isCachedQuery() {
    if [ -f "$DB" ]; then
       local count
       count="$(sqlite3 "${DB}" \
-         "select count(*) from main where query='${query}'")"
+         "SELECT COUNT(*) FROM main WHERE query='${query}'")"
       if [[ "$count" -gt 0 ]]; then printf "cached"; fi
    fi
 }
@@ -233,7 +236,7 @@ _getCachedQuery() {
    local query
    query="$1"
    sqlite3 "${DB}" \
-      "select nchapters,title from main where query='${query}'" |
+      "SELECT nchapters,title FROM main WHERE query='${query}'" |
       sed 's/^0|/[##] /;s/\(^[0-9]\+\)|/[\1] /' |
       awk '{ print FNR ") " $0 }' |
       sed 's/^[0-9])/0&/;s/\[\([0-9]\)\]/[0\1]/'
@@ -241,14 +244,14 @@ _getCachedQuery() {
 
 # Get id of yt content from cached table
 _getCachedIdQuery() {
-   local query
    local title
    query="$1"
    title="$2"
    # escape quotes
+   query=$(printf '%s' "$query" | sed "s/'/''/g")
    title=$(printf '%s' "$title" | sed "s/'/''/g")
    printf '%s' "$(sqlite3 "${DB}" \
-      "select id from main where query='${query}' and title='${title}'")"
+      "SELECT id FROM main WHERE query='${query}' AND title='${title}'")"
 }
 
 # Cache a query inside main table
@@ -257,7 +260,7 @@ _cacheQuery() {
    query="$1"
    # create main table and cache items
    sqlite3 "${DB}" \
-      "create table if not exists main (query str,id str,title str,nchapters int,chapters str,unique(title))"
+      "CREATE TABLE IF NOT EXISTS main (query STR,id STR,title STR,nchapters INT,chapters STR)"
    sqlite3 -separator ',' "${DB}" ".import ${TMPDIR}/${query} main"
 }
 
@@ -265,7 +268,7 @@ _cacheQuery() {
 _deleteQuery() {
    local query
    query="$1"
-   sqlite3 "${DB}" "delete from main where query='${query}'" ||
+   sqlite3 "${DB}" "DELETE FROM main WHERE query='${query}'" ||
       _die "Deleting query ${query} from cache db"
 }
 
