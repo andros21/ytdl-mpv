@@ -144,8 +144,12 @@ _checkDep() {
             fi
         }
     done
-    (echo "D̲eep̲ ̲P̲u̲r̲ple" | iconv -f utf-8 -t ascii//translit &>/dev/null) \
-        || _die "Unsupported iconv flavour, install gnu-libiconv"
+    ICONV=$(which iconv)
+    type "gnu-iconv" >/dev/null 2>&1 && ICONV=$(which gnu-iconv)
+    local test
+    test=$(echo "D̲eep̲ ̲P̲u̲r̲ple" | $ICONV -f utf-8 -s -c -t ascii)
+    [[ "$test" == "Deep Purple" ]] ||
+       _die "Unsupported iconv flavour, install gnu-iconv"
 }
 
 # Ensure internet connection is on
@@ -518,7 +522,7 @@ _startPlay() {
             ytsearch"$NUMBER" "$search" --dump-single-json \
             | query=$query jq -r '.entries[] | {query:env.query,id:.id,title:.title,nchapters:(.chapters|length),chapters:(.chapters|if .==null then [] else [.[].title] end)} | map(tostring) | @csv' \
             | sed 's/\xE2\x80\x9D//g;s/\xE2\x80\x9C//g' \
-            | iconv -f utf-8 -t ascii//translit \
+            | ($ICONV -f utf-8 -c -t ascii || true) \
             > "$TMPDIR/$query" &
         wait "$!"; yt_dlp_exit="$?"
         [[ "$yt_dlp_exit" -eq 0 ]] || _die "yt-dlp search fail, exit code ${yt_dlp_exit}"

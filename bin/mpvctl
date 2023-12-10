@@ -29,8 +29,12 @@ _checkDep() {
     for dep in "${deps[@]}"; do
         type "$dep" > /dev/null 2>&1 || _die "Cannot find ${dep} in your \$PATH"
     done
-    (echo "D̲eep̲ ̲P̲u̲r̲ple" | iconv -f utf-8 -t ascii//translit &>/dev/null) \
-        || _die "Unsupported iconv flavour, install gnu-libiconv"
+    ICONV=$(which iconv)
+    type "gnu-iconv" >/dev/null 2>&1 && ICONV=$(which gnu-iconv)
+    local test
+    test=$(echo "D̲eep̲ ̲P̲u̲r̲ple" | $ICONV -f utf-8 -s -c -t ascii)
+    [[ "$test" == "Deep Purple" ]] ||
+       _die "Unsupported iconv flavour, install gnu-iconv"
     SOCKCMD="socat - $SOCKET"
 }
 
@@ -131,7 +135,7 @@ _getPlaylist() {
                     csv=$(yt-dlp --dump-json "https://youtube.com/watch?v=${trid}" \
                             | sed 's/\xE2\x80\x9D//g;s/\xE2\x80\x9C//g' \
                             | jq -r '. | {query:"NULL",id:.id,title:.title,nchapters:(.chapters|length),chapters:(.chapters|if .==null then [] else [.[].title] end)} | map(tostring) | @csv' \
-                            | iconv -f utf-8 -t ascii//translit
+                            | ($ICONV -f utf-8 -c -t ascii || true)
                     )
                     # cache this single search as relative to a NULL query
                     sqlite3 "${db}" "insert into main (query,id,title,nchapters,chapters) values (${csv})"
@@ -141,7 +145,7 @@ _getPlaylist() {
                 # searching track title, using ytdl
                 local trtitle
                 trtitle=$(yt-dlp --get-title "https://youtube.com/watch?v=${trid}" \
-                    | iconv -f utf-8 -t ascii//translit)
+                    | ($ICONV -f utf-8 -c -t ascii || true))
             fi
             if [ -z "$trtitle" ]; then
                 printf '[Warning] yt-dlp title search failed for %s\n' "$trid" >&2
