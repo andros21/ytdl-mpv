@@ -128,18 +128,18 @@ _getPlaylist() {
             # search for track title
             local trtitle
             trtitle="$(sqlite3 "${db}" \
-               "SELECT DISTINCT nchapters,title FROM main WHERE id='${trid}'")"
+               "SELECT nchapters,title FROM meta WHERE id='${trid}'")"
             if [ -z "$trtitle" ]; then
                local csv
                csv=$(
                   yt-dlp --dump-json "https://youtube.com/watch?v=${trid}" |
                      sed 's/\xE2\x80\x9D//g;s/\xE2\x80\x9C//g' |
-                     jq -r '. | {query:"NULL",id:.id,title:.title,nchapters:(.chapters|length),chapters:(.chapters|if .==null then [] else [.[].title] end)} | map(tostring) | @csv' |
+                     jq -r '. | {id:.id,title:.title,nchapters:(.chapters|length),chapters:(.chapters|if .==null then [] else [.[].title] end)} | map(tostring) | @csv' |
                      ($ICONV -f utf-8 -c -t ascii || true)
                )
-               # cache this single search as relative to a NULL query
-               sqlite3 "${db}" "INSERT INTO main (id,title,nchapters,chapters) VALUES (${csv})"
-               trtitle="$(sqlite3 "${db}" "SELECT DISTINCT nchapters,title FROM main WHERE id='${trid}'")"
+               # cache this single id without a linked query inside main table
+               sqlite3 "${db}" "INSERT INTO meta (id,title,nchapters,chapters) VALUES (${csv})"
+               trtitle="$(sqlite3 "${db}" "SELECT nchapters,title FROM meta WHERE id='${trid}'")"
             fi
          else
             # searching track title, using ytdl
@@ -197,10 +197,10 @@ _getChaptersDb() {
    trid=${trid:7}
    # number of chapters
    local nch
-   nch="$(sqlite3 "${db}" "SELECT nchapters FROM main WHERE id='${trid}'")"
+   nch="$(sqlite3 "${db}" "SELECT nchapters FROM meta WHERE id='${trid}'")"
    if [ "$nch" -gt "0" ]; then
       # get chapters list from sqlite3 db
-      sqlite3 "$db" "SELECT chapters FROM main WHERE id='${trid}'" |
+      sqlite3 "$db" "SELECT chapters FROM meta WHERE id='${trid}'" |
          jq -r '.[]' |
          awk '{ print FNR ") " $0 }' |
          sed 's/^[0-9])/0&/'

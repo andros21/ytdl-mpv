@@ -47,10 +47,33 @@ _savePlaylist() {
 _loadPlaylist() {
    _ytdl_mpvctl load "$1" && _info "Playlist loaded from ... \"$1\""
 }
+_initCache() {
+   # create metadata schema
+   sqlite3 "${DB}" \
+      "CREATE TABLE IF NOT EXISTS meta (id STR PRIMARY KEY,title STR,nchapters INT,chapters STR)"
+   # override INSERT trigger
+   # if equal id imported then update the entry with the same id
+   # othewise simply insert it
+   # see: https://stackoverflow.com/questions/72998977/before-insert-trigger-with-primary-key-using-the-sqlite3-shell-import-command
+   sqlite3 "${DB}" \
+      "CREATE TRIGGER IF NOT EXISTS bulk_update_meta
+      BEFORE INSERT ON meta
+      WHEN EXISTS (SELECT * FROM meta WHERE id = NEW.id)
+      BEGIN
+      UPDATE meta
+         SET (title,nchapters,chapters) = (NEW.title,NEW.nchapters,NEW.chapters)
+         WHERE id = NEW.id;
+      SELECT raise(IGNORE);
+      END;"
+   # create main schema
+   sqlite3 "${DB}" \
+      "CREATE TABLE IF NOT EXISTS main (query STR,id STR,FOREIGN KEY(id) REFERENCES meta(id))"
+}
 _flushCache() {
    [ -f "${DB}" ] &&
       sqlite3 "$DB" "DROP TABLE main" &&
-      sqlite3 "$DB" "CREATE TABLE main (query STR,id STR,title STR,nchapters INT,chapters STR)" &&
+      sqlite3 "$DB" "DROP TABLE meta" &&
+      _initCache &&
       _info "ytdl-mpv cache flushed"
 }
 _flushHist() {
@@ -230,19 +253,21 @@ _isCachedQuery() {
    fi
 }
 
-# Get a query that was cached inside main table
+# Get a query that was cached
 # and stdout it formatted for rofi
 _getCachedQuery() {
    local query
    query="$1"
    sqlite3 "${DB}" \
-      "SELECT nchapters,title FROM main WHERE query='${query}'" |
+      "SELECT meta.nchapters,meta.title FROM main
+         INNER JOIN meta ON main.id = meta.id
+         WHERE main.query='${query}'" |
       sed 's/^0|/[##] /;s/\(^[0-9]\+\)|/[\1] /' |
       awk '{ print FNR ") " $0 }' |
       sed 's/^[0-9])/0&/;s/\[\([0-9]\)\]/[0\1]/'
 }
 
-# Get id of yt content from cached table
+# Get id of yt content from cache
 _getCachedIdQuery() {
    local title
    query="$1"
@@ -251,17 +276,21 @@ _getCachedIdQuery() {
    query=$(printf '%s' "$query" | sed "s/'/''/g")
    title=$(printf '%s' "$title" | sed "s/'/''/g")
    printf '%s' "$(sqlite3 "${DB}" \
-      "SELECT id FROM main WHERE query='${query}' AND title='${title}'")"
+      "SELECT meta.id FROM main
+         INNER JOIN meta ON main.id = meta.id
+         WHERE main.query='${query}' AND meta.title='${title}'")"
 }
 
 # Cache a query inside main table
 _cacheQuery() {
    local query
    query="$1"
-   # create main table and cache items
-   sqlite3 "${DB}" \
-      "CREATE TABLE IF NOT EXISTS main (query STR,id STR,title STR,nchapters INT,chapters STR)"
-   sqlite3 -separator ',' "${DB}" ".import ${TMPDIR}/${query} main"
+   # load meta data (last 4 columns: id,title,nchapters,chapters)
+   awk 'BEGIN{FS=OFS=","} {$1="";sub(/,/,"")}1' "${TMPDIR}/${query}" >"${TMPDIR}/${query}.meta"
+   sqlite3 -separator ',' "${DB}" ".import ${TMPDIR}/${query}.meta meta"
+   # load main data (first 2 columns: query,id)
+   awk 'BEGIN{FS=OFS=","} {print $1,$2}' "${TMPDIR}/${query}" >"${TMPDIR}/${query}.main"
+   sqlite3 -separator ',' "${DB}" ".import ${TMPDIR}/${query}.main main"
 }
 
 # Delete a cached query inside main table
@@ -663,6 +692,7 @@ while :; do
    shift
 done
 
-_checkDep # Run deps test
-_checkCon # Run conn test
-_mainMenu # Run main menu
+_checkDep  # Run deps test
+_checkCon  # Run conn test
+_initCache # Run init cache
+_mainMenu  # Run main menu
