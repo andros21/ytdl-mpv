@@ -57,7 +57,7 @@ jobs:
         env:
           OUTPUT: CHANGELOG.md
       - name: Commit changelog
-        uses: EndBug/add-and-commit@1bad3abcf0d6ec49a5857d124b0bfb52dc7bb081
+        uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5
         with:
           message: "chore(CHANGELOG): add ytdl-mpv ${{ env.TAG }} changes"
           add: 'CHANGELOG.md'
