@@ -8,3 +8,5 @@ updates:
       day: "sunday"
       time: "07:00"
       timezone: "Europe/Rome"
+    reviewers:
+      - "andros21"
