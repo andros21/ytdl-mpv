@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Generate changelog latest
-        uses: orhun/git-cliff-action@90ed560c895459ac2ae450a00604a6ad02a78478
+        uses: orhun/git-cliff-action@8b17108aad4d9362649a5dae020746c2a767c90d
         id: cliff
         with:
           config: cliff.toml
@@ -50,7 +50,7 @@ jobs:
         run: |
           echo "TAG=${GITHUB_REF:10}" >> "$GITHUB_ENV"
       - name: Refresh changelog
-        uses: orhun/git-cliff-action@90ed560c895459ac2ae450a00604a6ad02a78478
+        uses: orhun/git-cliff-action@8b17108aad4d9362649a5dae020746c2a767c90d
         with:
           config: cliff.toml
           args: --verbose --tag ${{ env.TAG }}
