@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.0] - 2024-03-17
+
+**Full Changelog**: [`dd1ab33...eccb1ec`](https://github.com/andros21/ytdl-mpv/compare/dd1ab3361e793824fea7a8693b5ad70090819cc4...eccb1ec48519a51f758725f61ea444ca50e2d4c4)
+
+### Bug Fixes
+
+- [`6f1ebb9`](https://github.com/andros21/ytdl-mpv/commit/6f1ebb90bf513cff3b23e7340d798b5193f53103) improve alpine linux compatibility
+
+### Build
+
+- [`f186e51`](https://github.com/andros21/ytdl-mpv/commit/f186e51e1373ddff1653e23e8969b1a85eee1044) bump orhun/git-cliff-action from 2.2.0 to 2.3.0 ([#38](https://github.com/andros21/ytdl-mpv/issues/38))
+- [`30686ab`](https://github.com/andros21/ytdl-mpv/commit/30686ab129fef99de06287fa0c669348d43b4291) bump EndBug/add-and-commit from 9.1.3 to 9.1.4 ([#39](https://github.com/andros21/ytdl-mpv/issues/39))
+- [`9a53928`](https://github.com/andros21/ytdl-mpv/commit/9a5392816b0a6b928b880bd3badb838621c62f75) bump orhun/git-cliff-action from 2.3.0 to 3.0.1 ([#40](https://github.com/andros21/ytdl-mpv/issues/40))
+- [`1adf1f7`](https://github.com/andros21/ytdl-mpv/commit/1adf1f7a5dbdc2cdcb44693d2b47d1deeb423c98) bump orhun/git-cliff-action from 3.0.1 to 3.0.2 ([#42](https://github.com/andros21/ytdl-mpv/issues/42))
+- [`f07a775`](https://github.com/andros21/ytdl-mpv/commit/f07a775bde7fffc413dcee0178b4fadc8bc90639) bump softprops/action-gh-release from 1 to 2 ([#41](https://github.com/andros21/ytdl-mpv/issues/41))
+- [`af46d86`](https://github.com/andros21/ytdl-mpv/commit/af46d864c39f3f7ae240f3c13c26b643281da1ef) bump actions/checkout from 4.1.1 to 4.1.2 ([#44](https://github.com/andros21/ytdl-mpv/issues/44))
+- [`22cc861`](https://github.com/andros21/ytdl-mpv/commit/22cc8615cd767469d75adc977c0310a0005d2c81) bump softprops/action-gh-release from 2.0.2 to 2.0.4 ([#43](https://github.com/andros21/ytdl-mpv/issues/43))
+
+### Features
+
+- [`6b69c8f`](https://github.com/andros21/ytdl-mpv/commit/6b69c8f924e75c01d1a06858278edaa1877f870e) [**breaking**] split cache main table in main + meta ([#37](https://github.com/andros21/ytdl-mpv/issues/37))
+
+### Miscellaneous Tasks
+
+- [`8a3087f`](https://github.com/andros21/ytdl-mpv/commit/8a3087f25b38904b8fb895477d1f81f6f41589aa) add ytdl-mpv v0.6.0 changes
+- [`26aeb66`](https://github.com/andros21/ytdl-mpv/commit/26aeb6606a8e95c35bf9e5e4dce642602b1b97f1) bump `yt-dlp` to latest release
+- [`f5efabf`](https://github.com/andros21/ytdl-mpv/commit/f5efabf4fc44ca1ffb2dbd92511e1d720d69a877) bump `yt-dlp` to latest release
+- [`d1f8bf3`](https://github.com/andros21/ytdl-mpv/commit/d1f8bf3e0f1f6b16638c478d96f626dc92ff55fa) add me as reviewer
+- [`a9e1e1e`](https://github.com/andros21/ytdl-mpv/commit/a9e1e1ed4c4e33cf44063cf5b857bd5e2b9185aa) bump yt-dlp to latest release
+- [`eccb1ec`](https://github.com/andros21/ytdl-mpv/commit/eccb1ec48519a51f758725f61ea444ca50e2d4c4) bump version to v0.7.0
+
 ## [v0.6.0] - 2023-11-11
 
 **Full Changelog**: [`a984f78...dd1ab33`](https://github.com/andros21/ytdl-mpv/compare/a984f788eb657a6de2df150ce463621c049a2fb4...dd1ab3361e793824fea7a8693b5ad70090819cc4)
