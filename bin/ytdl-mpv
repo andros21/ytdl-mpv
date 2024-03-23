@@ -22,7 +22,7 @@ _rofi_error() {
 }
 _copyId() {
    if [ "$XCLIP" ]; then
-      printf '%s' "$1" | xclip -i -selection "clipboard"
+      printf '%s\n%s' "$1" "$(xclip -o -selection "clipboard")" | xclip -i -selection "clipboard"
       _info "Copy in clipboard ... ${1:7}"
    fi
 }
@@ -86,6 +86,17 @@ _helpPlay() {
 [Enter] | Default action
 [${play_audio}] | Start audio playback
 [${play_video}] | Start video playback
+[${copy_id}] | Copy video id
+[$(printf '%s' "${multi_select}" | sed 's/Tab/⇄/')] | Multi selection
+[$(printf '%s' "${key_return}" | sed 's/Left/←/')] | Return
+EOF
+      _rofi -theme-str "$STYLE" -mesg "--  play menu key bindings  --" >/dev/null
+}
+_helpPlaySlim() {
+   local STYLE="window {width: 32%;} listview {lines: 6;}"
+   cat <<EOF |
+\
+[Enter] | Add in playlist
 [${copy_id}] | Copy video id
 [$(printf '%s' "${multi_select}" | sed 's/Tab/⇄/')] | Multi selection
 [$(printf '%s' "${key_return}" | sed 's/Left/←/')] | Return
@@ -168,6 +179,7 @@ _checkDep() {
       type "$dep" >/dev/null 2>&1 || {
          if [ "$dep" == "xclip" ]; then
             XCLIP=0
+            _info "Cannot find xclip in your \$PATH. Copy feats are disabled."
          else
             _die "Cannot find ${dep} in your \$PATH"
          fi
@@ -585,7 +597,10 @@ _startPlay() {
    # check if ytdl-mpv is already running, if yes append track to playlist
    local args
    local STYLE="window {width: ${WIDTH}%;} listview {lines: ${LINEN};}"
+   # decice which help menu to show
+   local help_slim
    if [ "$(_ytdl_mpvctl check)" == "disabled" ]; then
+      help_slim=0
       args=(-kb-custom-1 "${play_audio}"
          -kb-custom-2 "${play_video}"
          -kb-custom-3 "${copy_id}"
@@ -597,12 +612,15 @@ _startPlay() {
          -no-custom
          -mesg "-- play menu: start audio or video playback, help [Alt+h] --")
    else
-      args=(-kb-custom-5 "${key_return}"
+      help_slim=1
+      args=(-kb-custom-3 "${copy_id}"
+         -kb-custom-4 "${key_help}"
+         -kb-custom-5 "${key_return}"
          -kb-accept-alt "${multi_select}"
          -theme-str "$STYLE"
          -multi-select
          -no-custom
-         -mesg "-- play menu: add track to current playlist, simply [Enter] --")
+         -mesg "-- play menu: add track to current playlist, help [Alt+h] --")
    fi
    # selected track
    local strack
@@ -611,8 +629,30 @@ _startPlay() {
    rofi_exit="$?"
    # check if help requested
    if [[ "${rofi_exit}" -eq 13 ]]; then
-      _helpPlay
+      if [ "$help_slim" ]; then
+         _helpPlaySlim
+      else
+         _helpPlay
+      fi
       _startPlay
+   # check if copy requested
+   elif [[ "${rofi_exit}" -eq 12 ]]; then
+      if [ "$XCLIP" ]; then
+         local IFS
+         IFS=$'\n'
+         # flush clipboard
+         echo -n | xclip -i -selection "clipboard"
+         for strack in $stracks; do
+            strack="${strack:9}"
+            local id
+            id="ytdl://$(_getCachedIdQuery "$query" "$strack")"
+            _copyId "$id"
+         done
+         return
+      else
+         _info "xclip not installed. Copy feats are disabled."
+         _startPlay
+      fi
    else
       if [ -z "$stracks" ]; then
          _info "Nothing selected"
@@ -634,10 +674,10 @@ _startPlay() {
                0) "${default_do}" "$id" ;;
                10) _playAudio "$id" ;;
                11) _playVideo "$id" ;;
-               12)
-                  _copyId "$id"
-                  return
-                  ;;
+               # 12)
+               #    _copyId "$id"
+               #    return
+               #    ;;
                esac
                sleep 1
             else
