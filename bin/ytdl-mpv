@@ -39,7 +39,7 @@ _playVideo() {
    _info "Video playback ... ${1:7}"
 }
 _appendTrack() {
-   _ytdl_mpvctl add "$1" && _info "Add track to cur playlist ... ${1:7}"
+   _ytdl_mpvctl add "$1" && _info "Add track to playlist ... ${1:7}"
 }
 _savePlaylist() {
    _ytdl_mpvctl save "$1" && _info "Current playlist saved to ... \"$1\""
@@ -219,18 +219,18 @@ EOF
 _getMainMenu() {
    cat <<EOF
 < Exit
-aa) [ Add/play to cur playlist ] >
-ep) [ Edit cur playlist ] >
-fc) [ Flush cache dir ] >
-fh) [ Flush search history ] >
-ld) [ Load a saved playlist ] >
-lp) [ Loop/unloop cur playlist ] >
-nx) [ Play next track in playlist ] >
-pc) [ Playlist clear ] >
-pp) [ Toggle play/pause ] >
-pv) [ Play prev track in playlist ] >
+aa) [ Add playlist ] >
+ep) [ Edit playlist ] >
+fc) [ Flush cache ] >
+fp) [ Flush playlist ] >
+fh) [ Flush history ] >
+ld) [ Load playlist ] >
+lp) [ Loop/unloop ] >
+nx) [ Play next ] >
+pp) [ Play/pause ] >
+pv) [ Play prev ] >
 sp) [ Stop playback ] >
-sv) [ Save current playlist ] >
+sv) [ Save playlist ] >
 EOF
 }
 
@@ -316,7 +316,7 @@ _deleteQuery() {
 # ytdl-mpv main interactive menu
 _mainMenu() {
    local action
-   local STYLE="window {width: 50%;} listview {lines: 13;}"
+   local STYLE="window {width: 35%;} listview {lines: 13;}"
    action="$(_getMainMenu |
       _rofi -theme-str "$STYLE" -no-custom -mesg "-- main menu: select an action --" |
       awk '{$1=tolower($1);print $1}')"
