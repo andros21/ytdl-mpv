@@ -2,6 +2,58 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.1] - 2024-12-29
+
+**Full Changelog**: [`eccb1ec...0d2878e`](https://github.com/andros21/ytdl-mpv/compare/eccb1ec48519a51f758725f61ea444ca50e2d4c4...0d2878ecdeed217f857586b1feddc551ffa83347)
+
+### Bug Fixes
+
+- [`6b16e2a`](https://github.com/andros21/ytdl-mpv/commit/6b16e2a8f25d537ed81b1c52707e00cb6f9a7849) clipboard copy for multi-selection ([#45](https://github.com/andros21/ytdl-mpv/issues/45))
+
+### Build
+
+- [`8725ad4`](https://github.com/andros21/ytdl-mpv/commit/8725ad46d234b9e9368baf9e59df381d23553061) bump actions/checkout from 4.1.2 to 4.1.3 ([#47](https://github.com/andros21/ytdl-mpv/issues/47))
+- [`53b0ce0`](https://github.com/andros21/ytdl-mpv/commit/53b0ce0299089f50f09c69b4481de84337bb5f3f) bump actions/checkout from 4.1.3 to 4.1.4 ([#48](https://github.com/andros21/ytdl-mpv/issues/48))
+- [`83788de`](https://github.com/andros21/ytdl-mpv/commit/83788deedc0041cfefc1c2aac850a96900a1ae92) bump actions/checkout from 4.1.4 to 4.1.5 ([#49](https://github.com/andros21/ytdl-mpv/issues/49))
+- [`c4928e8`](https://github.com/andros21/ytdl-mpv/commit/c4928e8e40a3c551bb1d492e0131d09d07d9cc07) bump softprops/action-gh-release from 2.0.4 to 2.0.5 ([#50](https://github.com/andros21/ytdl-mpv/issues/50))
+- [`7fe192a`](https://github.com/andros21/ytdl-mpv/commit/7fe192ae4b83c906bb21530b86e57b8e6c125397) bump actions/checkout from 4.1.5 to 4.1.6 ([#51](https://github.com/andros21/ytdl-mpv/issues/51))
+- [`dea1680`](https://github.com/andros21/ytdl-mpv/commit/dea1680db185428556a909f301c24d03a7ab8218) bump orhun/git-cliff-action from 3.0.2 to 3.1.0 ([#52](https://github.com/andros21/ytdl-mpv/issues/52))
+- [`dc6dd15`](https://github.com/andros21/ytdl-mpv/commit/dc6dd15e0d022fd48e49f9651963ef98db9cebee) bump orhun/git-cliff-action from 3.1.0 to 3.2.0 ([#53](https://github.com/andros21/ytdl-mpv/issues/53))
+- [`d147f0d`](https://github.com/andros21/ytdl-mpv/commit/d147f0d82e6ab78d9c0d26c91a05e2a6d939f30d) bump actions/checkout from 4.1.6 to 4.1.7 ([#54](https://github.com/andros21/ytdl-mpv/issues/54))
+- [`c46e341`](https://github.com/andros21/ytdl-mpv/commit/c46e341e398c2f29b4ef8bc4d114a26933336d1d) bump softprops/action-gh-release from 2.0.5 to 2.0.6 ([#55](https://github.com/andros21/ytdl-mpv/issues/55))
+- [`b2a5393`](https://github.com/andros21/ytdl-mpv/commit/b2a5393d5fab39c6d2583fe3ffdbb3de05a24b54) bump softprops/action-gh-release from 2.0.6 to 2.0.8 ([#56](https://github.com/andros21/ytdl-mpv/issues/56))
+- [`96e0e5e`](https://github.com/andros21/ytdl-mpv/commit/96e0e5eb1094bf37cf5891ee85143354c773cf14) bump orhun/git-cliff-action from 3.2.0 to 3.3.0 ([#57](https://github.com/andros21/ytdl-mpv/issues/57))
+- [`7aed3bb`](https://github.com/andros21/ytdl-mpv/commit/7aed3bbb90c38d5a49589300b44b7ae8f2399933) bump orhun/git-cliff-action from 3.3.0 to 4.0.0 ([#58](https://github.com/andros21/ytdl-mpv/issues/58))
+- [`72fc20f`](https://github.com/andros21/ytdl-mpv/commit/72fc20f45115c520d2c16a4467e858691ff907b6) bump orhun/git-cliff-action from 4.0.0 to 4.0.2 ([#59](https://github.com/andros21/ytdl-mpv/issues/59))
+- [`72b9011`](https://github.com/andros21/ytdl-mpv/commit/72b9011022bfc83591e15409b932e999fd1a9189) bump orhun/git-cliff-action from 4.0.2 to 4.1.0 ([#60](https://github.com/andros21/ytdl-mpv/issues/60))
+- [`cf97b5f`](https://github.com/andros21/ytdl-mpv/commit/cf97b5f979bcbde6c436380319f28932003c670d) bump actions/checkout from 4.1.7 to 4.2.0 ([#62](https://github.com/andros21/ytdl-mpv/issues/62))
+- [`e6f4694`](https://github.com/andros21/ytdl-mpv/commit/e6f4694fceabc355445fcf89421c5629cb4c0b7c) bump orhun/git-cliff-action from 4.1.0 to 4.3.0 ([#61](https://github.com/andros21/ytdl-mpv/issues/61))
+- [`7b8c714`](https://github.com/andros21/ytdl-mpv/commit/7b8c714d8d1d61094311e0d013658ea083afeb36) bump actions/checkout from 4.2.0 to 4.2.1 ([#63](https://github.com/andros21/ytdl-mpv/issues/63))
+- [`0240330`](https://github.com/andros21/ytdl-mpv/commit/02403305a047830157eaac1be01947cd7b73e8d8) bump orhun/git-cliff-action from 4.3.0 to 4.3.1 ([#64](https://github.com/andros21/ytdl-mpv/issues/64))
+- [`1cc6354`](https://github.com/andros21/ytdl-mpv/commit/1cc6354c640cb707820a7ab1d7801808638ce931) bump actions/checkout from 4.2.1 to 4.2.2 ([#65](https://github.com/andros21/ytdl-mpv/issues/65))
+- [`57a7ef5`](https://github.com/andros21/ytdl-mpv/commit/57a7ef5f3448e988882f73713083b5e4a0e4e29e) bump softprops/action-gh-release from 2.0.8 to 2.0.9 ([#66](https://github.com/andros21/ytdl-mpv/issues/66))
+- [`a63eab4`](https://github.com/andros21/ytdl-mpv/commit/a63eab4bb49181b86d2c2e2516415465005a709c) bump softprops/action-gh-release from 2.0.9 to 2.1.0 ([#67](https://github.com/andros21/ytdl-mpv/issues/67))
+- [`70d87f9`](https://github.com/andros21/ytdl-mpv/commit/70d87f9cde8f1e21b369c743f51e062fabc6afbe) bump orhun/git-cliff-action from 4.3.1 to 4.4.0 ([#68](https://github.com/andros21/ytdl-mpv/issues/68))
+- [`f578f70`](https://github.com/andros21/ytdl-mpv/commit/f578f708fc37a9cc059aa33a6ed6ad90be39d551) bump orhun/git-cliff-action from 4.4.0 to 4.4.1 ([#69](https://github.com/andros21/ytdl-mpv/issues/69))
+- [`383c801`](https://github.com/andros21/ytdl-mpv/commit/383c801251023b045441a4db251995dd75e3e8b3) bump softprops/action-gh-release from 2.1.0 to 2.2.0 ([#71](https://github.com/andros21/ytdl-mpv/issues/71))
+- [`e0f8f77`](https://github.com/andros21/ytdl-mpv/commit/e0f8f77f667f529577ef6a40f568ee4429da21ef) bump orhun/git-cliff-action from 4.4.1 to 4.4.2 ([#70](https://github.com/andros21/ytdl-mpv/issues/70))
+
+### Miscellaneous Tasks
+
+- [`6f917a9`](https://github.com/andros21/ytdl-mpv/commit/6f917a9131259aa3ba027f45d39889ed6c93d98c) add ytdl-mpv v0.7.0 changes
+- [`f03e39b`](https://github.com/andros21/ytdl-mpv/commit/f03e39bd5dbe693db0f942306ead328f0eaeb8bb) bump yt-dlp to latest release
+- [`1b08635`](https://github.com/andros21/ytdl-mpv/commit/1b08635ac76b35feaaf826e26cbc8b466512c61c) bump yt-dlp to latest release
+- [`72ac927`](https://github.com/andros21/ytdl-mpv/commit/72ac927ed9fa346148d040cac0ded69f21f4692d) bump yt-dlp to latest release
+- [`8944362`](https://github.com/andros21/ytdl-mpv/commit/89443624dcebc09decd1d55057225a0ea2803980) bump yt-dlp to latest release
+- [`3083dd1`](https://github.com/andros21/ytdl-mpv/commit/3083dd1e6ffce99334a4a5fb197c2476f623bdc7) bump yt-dlp to latest release
+- [`47d5087`](https://github.com/andros21/ytdl-mpv/commit/47d5087fd665caebef10f76be5e65472c050b19e) bump ytdl to latest version
+- [`c47db41`](https://github.com/andros21/ytdl-mpv/commit/c47db41f11f434ec93438db041c0a75d49fca6c5) bump ytdl to latest version
+- [`55ff387`](https://github.com/andros21/ytdl-mpv/commit/55ff38790dd57fca7558a48645c3be5d4559e07b) bump ytdl to latest version
+- [`3b5a764`](https://github.com/andros21/ytdl-mpv/commit/3b5a7645b0e66b260065c401db6444c673aaf0af) bump ytdl to latest version
+- [`2360c24`](https://github.com/andros21/ytdl-mpv/commit/2360c24a8853b6026cc3915c5c00b18b305a170a) bump ytdl to latest version
+- [`c537be6`](https://github.com/andros21/ytdl-mpv/commit/c537be6b8f44578f1fb5cd6e93adc96bc188413a) simplify _mainMenu labels and aspect ([#46](https://github.com/andros21/ytdl-mpv/issues/46))
+- [`0d2878e`](https://github.com/andros21/ytdl-mpv/commit/0d2878ecdeed217f857586b1feddc551ffa83347) bump version to v0.7.1
+
 ## [v0.7.0] - 2024-03-17
 
 **Full Changelog**: [`dd1ab33...eccb1ec`](https://github.com/andros21/ytdl-mpv/compare/dd1ab3361e793824fea7a8693b5ad70090819cc4...eccb1ec48519a51f758725f61ea444ca50e2d4c4)
