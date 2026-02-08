@@ -47,7 +47,7 @@
 - `socat` `sqlite3` `xargs` `jq` `iconv`
 - [`mpv>0.35.1`](https://github.com/mpv-player/mpv)
 - [`rofi>=1.6.1`](https://github.com/davatorium/rofi)
-- [`yt-dlp==2026.01.31`](https://github.com/yt-dlp/yt-dlp)
+- [`yt-dlp[default]==2026.2.4`](https://github.com/yt-dlp/yt-dlp)
 
 **Opt dependencies**
 
