@@ -28,7 +28,7 @@ jobs:
         run: |
           echo "TAG=${GITHUB_REF:10}" >> "$GITHUB_ENV"
       - name: Create release
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228
         with:
           name: ytdl-mpv ${{ env.TAG }}
           body: ${{ steps.cliff.outputs.content }}
